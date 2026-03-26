@@ -23,7 +23,6 @@ import {
   X
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { MadeWithDyad } from "@/components/made-with-dyad";
 
 // --- CONSTANTS & DATA ---
 
@@ -728,7 +727,7 @@ export default function Home() {
             </div>
             <h1 className="font-bold text-lg tracking-tight text-white">Plan Automatización</h1>
           </div>
-          <p className="text-xs text-slate-400 font-medium">Jorge Luján · jorgelujan.org</p>
+          <p className="text-xs text-slate-400 font-medium">AgenciaIA Solutions</p>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
@@ -873,12 +872,11 @@ export default function Home() {
             <span className="sm:hidden">Doc. Validación</span>
           </div>
           <div className="flex items-center gap-4">
-            <a href="https://jorgelujan.org" target="_blank" rel="noreferrer" className="hover:text-white transition-colors flex items-center gap-1">
-              jorgelujan.org <ExternalLink size={12} />
+            <a href="#" className="hover:text-white transition-colors flex items-center gap-1">
+              AgenciaIA Solutions <ExternalLink size={12} />
             </a>
           </div>
         </footer>
-        <MadeWithDyad />
       </main>
 
       {/* API MODAL */}
