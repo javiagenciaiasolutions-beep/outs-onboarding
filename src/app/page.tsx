@@ -298,19 +298,16 @@ const PROJECTS = [
       },
       {
         id: "p6-2",
-        type: "api_call",
-        title: "Se envía información y preguntas frecuentes",
-        subtitle: "Primer contacto con catálogo de modelos y respuestas a dudas comunes.",
-        api: ["Callbell"],
-        details: ["POST /v1/messages/send", "Mensaje de bienvenida + FAQs"]
-      },
-      {
-        id: "p6-3",
         type: "ai",
-        title: "El asistente evalúa al cliente",
-        subtitle: "Se realizan preguntas para entender el presupuesto y la urgencia del proyecto.",
-        api: ["Callbell", "Odoo"],
-        details: ["FASE 1: Lead Scoring", "Preguntas: presupuesto, tipo instalación, urgencia", "Puntuación en x_lead_score"]
+        title: "El asistente atiende y evalúa al cliente",
+        subtitle: "Resuelve dudas frecuentes, envía el catálogo y realiza preguntas para calificar el interés del cliente.",
+        api: ["Callbell", "IA", "Odoo"],
+        details: [
+          "POST /v1/messages/send: Envío de catálogo y FAQs",
+          "FASE 1: Lead Scoring & Triaje",
+          "Preguntas: presupuesto, tipo instalación, urgencia",
+          "Puntuación en x_lead_score de Odoo"
+        ]
       },
       {
         id: "p6-4",
