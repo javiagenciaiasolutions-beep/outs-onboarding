@@ -468,7 +468,7 @@ const FlowStep = ({ step, isBranch = false }: { step: any, isBranch?: boolean })
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const config: Record<string, { emoji: string, label: string, color: string, bg: string }> = {
-    trigger: { emoji: "🔔", label: "INICIO", color: "border-[#1A56DB]", bg: "bg-[#1A56DB]" },
+    trigger: { emoji: "🔔", label: "INICIO", color: "border-[#1A56DB]", bg: "bg-[#0A1F5C]" },
     action: { emoji: "✅", label: "ACCIÓN", color: "border-[#1A56DB]", bg: "bg-[#0f2744]" },
     wait: { emoji: "⏳", label: "ESPERA", color: "border-[#F59E0B]", bg: "bg-[#78350F22]" },
     decision: { emoji: "🔀", label: "CONDICIÓN", color: "border-[#7C3AED]", bg: "bg-[#312E8122]" },
