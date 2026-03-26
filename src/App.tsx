@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Zap, 
   ArrowRight, 
@@ -18,7 +18,10 @@ import {
   Table,
   Mail,
   LayoutDashboard,
-  ExternalLink
+  ExternalLink,
+  Code2,
+  X,
+  Menu
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
@@ -454,6 +457,78 @@ const ApiBadge = ({ name }: { name: string }) => {
   );
 };
 
+const ApiReferenceModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+  if (!isOpen) return null;
+
+  const apis = [
+    {
+      name: "Callbell",
+      endpoints: [
+        { method: "POST", url: "https://api.callbell.eu/v1/messages/send", desc: "Enviar mensaje" },
+        { method: "GET", url: "https://api.callbell.eu/v1/messages/status/:uuid", desc: "Estado de mensaje" },
+        { method: "GET", url: "https://api.callbell.eu/v1/contacts", desc: "Listar contactos" },
+        { method: "POST", url: "https://api.callbell.eu/v1/contacts", desc: "Crear contacto" }
+      ]
+    },
+    {
+      name: "Odoo XML-RPC",
+      endpoints: [
+        { method: "POST", url: "{odoo_url}/xmlrpc/2/common", desc: "authenticate" },
+        { method: "POST", url: "{odoo_url}/xmlrpc/2/object", desc: "execute_kw (CRUD)" }
+      ]
+    },
+    {
+      name: "Google Sheets",
+      endpoints: [
+        { method: "GET", url: "/v4/spreadsheets/{id}/values/{range}", desc: "Leer celdas" },
+        { method: "PUT", url: "/v4/spreadsheets/{id}/values/{range}", desc: "Actualizar celdas" },
+        { method: "POST", url: "/v4/spreadsheets/{id}/values/{range}:append", desc: "Añadir fila" }
+      ]
+    }
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-[#0A1F5C] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl flex flex-col">
+        <div className="p-6 border-b border-white/5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Code2 className="text-[#1A56DB]" />
+            <h3 className="text-xl font-bold text-white">Referencia de APIs</h3>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+          {apis.map((api) => (
+            <div key={api.name} className="space-y-4">
+              <h4 className="text-sm font-bold text-[#1A56DB] uppercase tracking-widest">{api.name}</h4>
+              <div className="space-y-2">
+                {api.endpoints.map((ep, i) => (
+                  <div key={i} className="bg-black/20 p-3 rounded-xl border border-white/5 font-mono text-xs">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={cn(
+                        "px-1.5 py-0.5 rounded font-bold",
+                        ep.method === 'POST' ? 'bg-blue-500/20 text-blue-400' : 
+                        ep.method === 'GET' ? 'bg-emerald-500/20 text-emerald-400' : 
+                        'bg-amber-500/20 text-amber-400'
+                      )}>
+                        {ep.method}
+                      </span>
+                      <span className="text-slate-500">{ep.desc}</span>
+                    </div>
+                    <div className="text-slate-300 break-all">{ep.url}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const FlowStep = ({ step, isBranch = false }: { step: any, isBranch?: boolean }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -514,7 +589,7 @@ const FlowStep = ({ step, isBranch = false }: { step: any, isBranch?: boolean })
         </div>
 
         <div className={cn(
-          "overflow-hidden transition-all duration-300 ease-in-out",
+          "overflow-hidden transition-all duration-500 ease-in-out",
           isOpen ? "max-h-96 mt-4 opacity-100" : "max-h-0 opacity-0"
         )}>
           <div className="pt-4 border-t border-white/10">
@@ -543,14 +618,13 @@ const Connector = () => (
 );
 
 const FlowDiagram = ({ steps }: { steps: any[] }) => {
-  // Logic to group branches after a decision
   const renderedSteps = useMemo(() => {
     const result = [];
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
       if (step.type === 'decision') {
         result.push({ type: 'decision_group', decision: step, yes: steps[i+1], no: steps[i+2] });
-        i += 2; // Skip the next two as they are branches
+        i += 2;
       } else {
         result.push(step);
       }
@@ -569,9 +643,7 @@ const FlowDiagram = ({ steps }: { steps: any[] }) => {
                 <div className="w-px h-full border-l-2 border-dotted border-[#1A56DB44]"></div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto relative">
-                {/* Branch Connectors */}
                 <div className="hidden md:block absolute top-0 left-1/4 right-1/4 h-px border-t-2 border-dotted border-[#1A56DB44]"></div>
-                
                 <div className="flex flex-col items-center">
                   <div className="md:hidden w-px h-6 border-l-2 border-dotted border-[#1A56DB44]"></div>
                   <FlowStep step={item.yes} isBranch />
@@ -604,9 +676,20 @@ const FlowDiagram = ({ steps }: { steps: any[] }) => {
 
 export default function App() {
   const [activeId, setActiveId] = useState("01");
-  const activeProject = PROJECTS.find(p => p.id === activeId) || PROJECTS[0];
+  const [isApiModalOpen, setIsApiModalOpen] = useState(false);
+  const [isChanging, setIsChanging] = useState(false);
 
+  const activeProject = PROJECTS.find(p => p.id === activeId) || PROJECTS[0];
   const totalSteps = PROJECTS.reduce((acc, p) => acc + p.steps.length, 0);
+
+  const handleProjectChange = (id: string) => {
+    if (id === activeId) return;
+    setIsChanging(true);
+    setTimeout(() => {
+      setActiveId(id);
+      setIsChanging(false);
+    }, 300);
+  };
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-[#0d1b2a] text-slate-200 font-['Space_Grotesk'] selection:bg-[#1A56DB] selection:text-white">
@@ -620,10 +703,24 @@ export default function App() {
         .font-mono {
           font-family: 'JetBrains Mono', monospace;
         }
+
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.1);
+        }
       `}</style>
 
-      {/* SIDEBAR */}
-      <aside className="w-full md:w-[280px] bg-[#0A1F5C] border-r border-white/5 flex flex-col shrink-0 z-50">
+      {/* SIDEBAR (Desktop) */}
+      <aside className="hidden md:flex w-[280px] bg-[#0A1F5C] border-r border-white/5 flex-col shrink-0 z-50">
         <div className="p-6 border-b border-white/5">
           <div className="flex items-center gap-3 mb-1">
             <div className="w-8 h-8 bg-[#1A56DB] rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/40">
@@ -641,7 +738,7 @@ export default function App() {
           {PROJECTS.map((p) => (
             <button
               key={p.id}
-              onClick={() => setActiveId(p.id)}
+              onClick={() => handleProjectChange(p.id)}
               className={cn(
                 "w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 group",
                 activeId === p.id 
@@ -668,16 +765,14 @@ export default function App() {
           ))}
         </nav>
 
-        <div className="p-6 bg-black/20 border-t border-white/5">
-          <div className="mb-4">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-3">APIs Utilizadas</span>
-            <div className="flex flex-wrap gap-2">
-              <ApiBadge name="Odoo" />
-              <ApiBadge name="Callbell" />
-              <ApiBadge name="Sheets" />
-              <ApiBadge name="n8n" />
-            </div>
-          </div>
+        <div className="p-6 bg-black/20 border-t border-white/5 space-y-4">
+          <button 
+            onClick={() => setIsApiModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-white transition-all border border-white/5"
+          >
+            <Code2 size={14} className="text-[#1A56DB]" />
+            VER TODAS LAS APIs
+          </button>
           <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
             <span>{PROJECTS.length} AUTOMATIZACIONES</span>
             <span>{totalSteps} PASOS TOTALES</span>
@@ -685,66 +780,97 @@ export default function App() {
         </div>
       </aside>
 
+      {/* MOBILE HEADER & NAV */}
+      <div className="md:hidden bg-[#0A1F5C] border-b border-white/5 p-4 sticky top-0 z-[60]">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <LayoutDashboard size={18} className="text-[#1A56DB]" />
+            <h1 className="font-bold text-sm text-white">Plan Automatización</h1>
+          </div>
+          <button onClick={() => setIsApiModalOpen(true)} className="p-2 bg-white/5 rounded-lg">
+            <Code2 size={16} className="text-[#1A56DB]" />
+          </button>
+        </div>
+        <div className="relative">
+          <select 
+            value={activeId}
+            onChange={(e) => handleProjectChange(e.target.value)}
+            className="w-full bg-[#0d1b2a] border border-white/10 rounded-xl p-3 text-sm font-bold text-white appearance-none focus:outline-none focus:ring-2 focus:ring-[#1A56DB]"
+          >
+            {PROJECTS.map(p => (
+              <option key={p.id} value={p.id}>{p.id} - {p.title}</option>
+            ))}
+          </select>
+          <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+        </div>
+      </div>
+
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* HEADER */}
-        <header className="p-8 md:p-12 bg-gradient-to-b from-[#0f2744] to-transparent">
-          <div className="max-w-5xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="bg-[#1A56DB22] text-[#1A56DB] text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest">Proyecto {activeProject.id}</span>
-                  <div className="h-px w-8 bg-white/10"></div>
-                  <div className="flex gap-1">
-                    {activeProject.apis.map(a => <ApiBadge key={a} name={a} />)}
+        <div className={cn(
+          "flex-1 flex flex-col transition-all duration-300",
+          isChanging ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
+        )}>
+          {/* HEADER */}
+          <header className="p-8 md:p-12 bg-gradient-to-b from-[#0f2744] to-transparent">
+            <div className="max-w-5xl mx-auto">
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-[#1A56DB22] text-[#1A56DB] text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest">Proyecto {activeProject.id}</span>
+                    <div className="h-px w-8 bg-white/10"></div>
+                    <div className="flex gap-1">
+                      {activeProject.apis.map(a => <ApiBadge key={a} name={a} />)}
+                    </div>
+                  </div>
+                  <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight">{activeProject.title}</h2>
+                  <p className="text-lg text-slate-400 max-w-2xl leading-relaxed">{activeProject.description}</p>
+                </div>
+                
+                <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Complejidad</p>
+                    <p className="text-sm font-bold text-white">{activeProject.steps.length} Pasos Lógicos</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-full border-4 border-[#1A56DB22] border-t-[#1A56DB] flex items-center justify-center text-xs font-bold">
+                    {Math.round((activeProject.steps.length / 8) * 100)}%
                   </div>
                 </div>
-                <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight">{activeProject.title}</h2>
-                <p className="text-lg text-slate-400 max-w-2xl leading-relaxed">{activeProject.description}</p>
               </div>
-              
-              <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
-                <div className="text-right">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Complejidad</p>
-                  <p className="text-sm font-bold text-white">{activeProject.steps.length} Pasos Lógicos</p>
-                </div>
-                <div className="w-12 h-12 rounded-full border-4 border-[#1A56DB22] border-t-[#1A56DB] flex items-center justify-center text-xs font-bold">
-                  {Math.round((activeProject.steps.length / 8) * 100)}%
-                </div>
+
+              {/* PROGRESS BAR */}
+              <div className="mt-12 flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                {activeProject.steps.map((_, i) => (
+                  <React.Fragment key={i}>
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all duration-500",
+                      "bg-[#1A56DB] text-white shadow-lg shadow-blue-900/20"
+                    )}>
+                      {i + 1}
+                    </div>
+                    {i < activeProject.steps.length - 1 && (
+                      <div className="w-8 md:flex-1 h-0.5 bg-gradient-to-r from-[#1A56DB] to-[#1A56DB22] shrink-0"></div>
+                    )}
+                  </React.Fragment>
+                ))}
               </div>
             </div>
+          </header>
 
-            {/* PROGRESS BAR */}
-            <div className="mt-12 flex items-center gap-2">
-              {activeProject.steps.map((_, i) => (
-                <React.Fragment key={i}>
-                  <div className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-500",
-                    "bg-[#1A56DB] text-white shadow-lg shadow-blue-900/20"
-                  )}>
-                    {i + 1}
-                  </div>
-                  {i < activeProject.steps.length - 1 && (
-                    <div className="flex-1 h-0.5 bg-gradient-to-r from-[#1A56DB] to-[#1A56DB22]"></div>
-                  )}
-                </React.Fragment>
-              ))}
+          {/* DIAGRAM AREA */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar pb-24">
+            <div className="max-w-5xl mx-auto">
+              <FlowDiagram steps={activeProject.steps} />
             </div>
-          </div>
-        </header>
-
-        {/* DIAGRAM AREA */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar pb-24">
-          <div className="max-w-5xl mx-auto">
-            <FlowDiagram steps={activeProject.steps} />
           </div>
         </div>
 
         {/* FOOTER */}
-        <footer className="bg-[#0A1F5C] border-t border-white/5 p-4 flex items-center justify-between text-xs text-slate-400 font-medium">
+        <footer className="bg-[#0A1F5C] border-t border-white/5 p-4 flex items-center justify-between text-xs text-slate-400 font-medium z-50">
           <div className="flex items-center gap-2">
             <Info size={14} className="text-[#1A56DB]" />
-            <span>Documento de validación · Sujeto a confirmación del cliente</span>
+            <span className="hidden sm:inline">Documento de validación · Sujeto a confirmación del cliente</span>
+            <span className="sm:hidden">Doc. Validación</span>
           </div>
           <div className="flex items-center gap-4">
             <a href="https://jorgelujan.org" target="_blank" rel="noreferrer" className="hover:text-white transition-colors flex items-center gap-1">
@@ -754,21 +880,8 @@ export default function App() {
         </footer>
       </main>
 
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.1);
-        }
-      `}</style>
+      {/* API MODAL */}
+      <ApiReferenceModal isOpen={isApiModalOpen} onClose={() => setIsApiModalOpen(false)} />
     </div>
   );
 }
