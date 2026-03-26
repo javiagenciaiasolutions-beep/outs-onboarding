@@ -264,7 +264,7 @@ const PROJECTS = [
     id: "05",
     title: "Venta Cruzada",
     description: "Cuando un cliente compra uno de los 5 productos, recibe automáticamente un mensaje con productos complementarios adaptado a lo que compró.",
-    apis: ["Odoo", "Callbell"],
+    apis: ["Odoo", "Callbell", "Sheets"],
     steps: [
       {
         id: "p5-1",
@@ -278,9 +278,9 @@ const PROJECTS = [
         id: "p5-2",
         type: "decision",
         title: "¿Qué producto se compró?",
-        subtitle: "El sistema detecta qué producto compró el cliente para elegir el complemento ideal.",
-        api: ["n8n"],
-        details: ["Switch node en n8n: 5 ramas según producto", "Lógica de recomendación A/B/C/D/E"]
+        subtitle: "El sistema detecta el producto comprado y consulta en Google Sheets cuál es el complemento ideal configurado.",
+        api: ["n8n", "Sheets"],
+        details: ["Identificación del producto en n8n", "Consulta a Google Sheets (Tabla de Recomendaciones)", "Mapeo dinámico: Producto A -> Complemento B"]
       },
       {
         id: "p5-3",
