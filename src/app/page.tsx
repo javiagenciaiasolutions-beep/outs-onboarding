@@ -2,27 +2,22 @@
 
 import React, { useState, useMemo } from 'react';
 import { 
-  Zap, 
-  ArrowRight, 
-  Clock, 
-  GitBranch, 
-  CheckCircle2, 
-  XCircle, 
-  Link2, 
-  Bot, 
   ChevronDown, 
-  ChevronRight, 
+  ChevronUp,
   Info,
-  Database,
-  MessageSquare,
-  Table,
-  Mail,
   LayoutDashboard,
   ExternalLink,
   Code2,
-  X
+  X,
+  CheckCircle2
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // --- CONSTANTS & DATA ---
 
@@ -30,50 +25,46 @@ const PROJECTS = [
   {
     id: "01",
     title: "Nuevo Lead",
-    description: "Flujo de bienvenida multietapa para nuevos contactos en Odoo",
+    description: "Cuando llega un nuevo cliente, el sistema le da la bienvenida automáticamente, le pide las fotos necesarias y hace seguimiento si no responde.",
     apis: ["Odoo", "n8n", "Callbell", "Email"],
     steps: [
       {
         id: "p1-1",
         type: "trigger",
-        title: "Nuevo contacto creado en Odoo",
-        subtitle: "n8n detecta nuevo registro en crm.lead o res.partner",
+        title: "Se crea un nuevo cliente en el sistema",
+        subtitle: "El sistema detecta automáticamente cuando alguien se registra.",
         api: ["Odoo", "n8n"],
-        details: ["Polling cada 10 minutos", "Modelo: crm.lead / res.partner", "Filtro: create_date >= last_check"]
+        details: ["Trigger: Nuevo contacto creado en Odoo", "Polling cada 10 minutos", "Modelo: crm.lead / res.partner", "Filtro: create_date >= last_check"]
       },
       {
         id: "p1-2",
         type: "action",
-        title: "Enviar email de aviso al equipo",
-        subtitle: "Notificación interna: 'Nuevo lead: [Nombre], [Teléfono]'",
+        title: "Se avisa al equipo por email",
+        subtitle: "Notificación interna para que el equipo esté al tanto del nuevo contacto.",
         api: ["Email"],
-        details: ["Nodo Email de n8n", "Destinatario: email del equipo configurado"]
+        details: ["Acción: Enviar email de aviso al equipo", "Nodo Email de n8n", "Destinatario: email del equipo configurado"]
       },
       {
         id: "p1-3",
         type: "wait",
-        title: "Esperar X minutos",
-        subtitle: "Pausa antes de contactar al cliente por WhatsApp",
+        title: "El sistema espera unos minutos",
+        subtitle: "Pausa estratégica antes de contactar al cliente por WhatsApp.",
         api: ["n8n"],
         details: ["Wait node de n8n", "Tiempo configurable (recomendado: 5-10 min)"]
       },
       {
         id: "p1-4",
         type: "api_call",
-        title: "POST /v1/messages/send → WhatsApp bienvenida",
-        subtitle: "Mensaje solicitando fotos y vídeos del exterior",
+        title: "Se envía mensaje de bienvenida por WhatsApp",
+        subtitle: "Se solicita al cliente las fotos y vídeos necesarios para el presupuesto.",
         api: ["Callbell"],
-        details: [
-          "type: 'text'", 
-          "to: teléfono del contacto (E.164)",
-          "Texto: bienvenida + solicitud de material fotográfico"
-        ]
+        details: ["POST /v1/messages/send", "type: 'text'", "to: teléfono del contacto (E.164)"]
       },
       {
         id: "p1-5",
         type: "wait",
-        title: "Esperar 1 día laborable",
-        subtitle: "Ventana para que el cliente envíe el material",
+        title: "El sistema espera 1 día hábil",
+        subtitle: "Damos tiempo al cliente para que envíe el material solicitado.",
         api: ["n8n"],
         details: ["Wait node + lógica de días laborables", "Excluye sábados, domingos y festivos"]
       },
@@ -81,7 +72,7 @@ const PROJECTS = [
         id: "p1-6",
         type: "decision",
         title: "¿Ha respondido el cliente?",
-        subtitle: "Verificar si llegó mensaje o adjunto por WhatsApp",
+        subtitle: "El sistema comprueba si hemos recibido los archivos o un mensaje.",
         api: ["Callbell"],
         details: ["Webhook entrante de Callbell", "Verificar en Odoo si x_material_recibido = True"]
       },
@@ -89,340 +80,279 @@ const PROJECTS = [
         id: "p1-7-yes",
         type: "branch_yes",
         branchLabel: "SÍ — Ha enviado material",
-        title: "Descargar y adjuntar archivos a Odoo",
-        subtitle: "n8n descarga archivos desde URL Callbell y los sube a Odoo",
+        title: "Se guardan los archivos automáticamente",
+        subtitle: "El sistema descarga las fotos y las adjunta a la ficha del cliente.",
         api: ["Callbell", "Odoo"],
-        details: [
-          "GET archivo desde attachments[].url de Callbell",
-          "Convertir a Base64",
-          "POST ir.attachment en Odoo con res_model: crm.lead",
-          "Actualizar x_material_recibido = True"
-        ]
+        details: ["GET archivo desde attachments[].url de Callbell", "Convertir a Base64", "POST ir.attachment en Odoo con res_model: crm.lead"]
       },
       {
         id: "p1-7-no",
         type: "branch_no",
         branchLabel: "NO — Sin respuesta",
-        title: "Enviar recordatorio de texto",
-        subtitle: "Segundo intento por WhatsApp",
+        title: "Se envía un recordatorio amable",
+        subtitle: "Segundo contacto por WhatsApp para solicitar de nuevo el material.",
         api: ["Callbell"],
         details: ["POST /v1/messages/send tipo text", "Texto de recordatorio amable"]
       },
       {
         id: "p1-8",
         type: "api_call",
-        title: "POST mail.message → Log conversación en Odoo",
-        subtitle: "Registrar cada mensaje enviado/recibido en el hilo del lead",
+        title: "Se registra la conversación",
+        subtitle: "Toda la actividad queda guardada en el historial del cliente.",
         api: ["Odoo"],
-        details: [
-          "model: mail.message",
-          "method: create",
-          "body: contenido del mensaje",
-          "res_id: ID del crm.lead"
-        ]
+        details: ["POST mail.message → Log conversación en Odoo", "model: mail.message", "res_id: ID del crm.lead"]
       }
     ]
   },
   {
     id: "02",
     title: "Valoración",
-    description: "Solicitud automática de reseña cuando el equipo marca la casilla",
+    description: "Cuando el equipo marca que un trabajo está terminado, el sistema pide automáticamente una reseña al cliente por WhatsApp.",
     apis: ["Odoo", "Callbell"],
     steps: [
       {
         id: "p2-1",
         type: "trigger",
-        title: "Campo 'Valoración' marcado en Odoo",
-        subtitle: "n8n detecta x_valoracion = True y x_valoracion_wa_enviado = False",
+        title: "Se marca el trabajo como terminado",
+        subtitle: "El sistema detecta cuando el equipo activa la solicitud de reseña.",
         api: ["Odoo", "n8n"],
-        details: ["Polling cada 15 minutos", "Modelo: res.partner o crm.lead", "Doble filtro para evitar reenvíos"]
+        details: ["Trigger: Campo 'Valoración' marcado en Odoo", "Polling cada 15 minutos", "Modelo: res.partner o crm.lead"]
       },
       {
         id: "p2-2",
         type: "api_call",
-        title: "POST /v1/messages/send → WhatsApp con enlace de reseña",
-        subtitle: "Mensaje con enlace a Google Reviews u otra plataforma",
+        title: "Se pide una reseña por WhatsApp",
+        subtitle: "Se envía un mensaje personalizado con el enlace para valorar el servicio.",
         api: ["Callbell"],
-        details: [
-          "type: 'text' (si dentro de 24h) o 'template' (si fuera de 24h)",
-          "Incluir enlace a plataforma de reseñas",
-          "Guardar uuid de respuesta de Callbell"
-        ]
+        details: ["POST /v1/messages/send", "type: 'text' o 'template'", "Incluir enlace a plataforma de reseñas"]
       },
       {
         id: "p2-3",
         type: "action",
-        title: "Marcar como enviado en Odoo",
-        subtitle: "Prevenir reenvíos duplicados",
+        title: "Se marca como enviado",
+        subtitle: "El sistema registra que ya se pidió la valoración para no repetirla.",
         api: ["Odoo"],
-        details: [
-          "method: write",
-          "x_valoracion_wa_enviado = True",
-          "x_valoracion_fecha_envio = timestamp actual"
-        ]
+        details: ["Acción: Marcar como enviado en Odoo", "method: write", "x_valoracion_wa_enviado = True"]
       }
     ]
   },
   {
     id: "03",
     title: "Packs Mantenimiento",
-    description: "Upsell automático de mantenimiento 4 días después de instalar césped",
+    description: "4 días después de instalar el césped, el cliente recibe automáticamente una oferta de pack de mantenimiento.",
     apis: ["Odoo", "Callbell"],
     steps: [
       {
         id: "p3-1",
         type: "trigger",
-        title: "Cliente de césped marcado como instalado",
-        subtitle: "n8n detecta x_instalado = True y x_pack_enviado = False",
+        title: "Se detecta una nueva instalación finalizada",
+        subtitle: "El sistema identifica clientes de césped que ya tienen su producto instalado.",
         api: ["Odoo", "n8n"],
-        details: ["Polling cada hora", "Filtro por tag/categoría: 'cesped'", "Guarda fecha_instalacion para calcular D+4"]
+        details: ["Trigger: Cliente de césped marcado como instalado", "Polling cada hora", "Filtro por tag/categoría: 'cesped'"]
       },
       {
         id: "p3-2",
         type: "wait",
-        title: "Esperar 4 días naturales",
-        subtitle: "Calcular: fecha_instalacion + 4 días = fecha de envío",
+        title: "El sistema espera 4 días",
+        subtitle: "Pausa programada para dejar que el cliente disfrute de su nueva instalación.",
         api: ["n8n"],
-        details: ["Wait node con fecha absoluta", "Alternativa: cola en Sheets con fecha_envio programada"]
+        details: ["Wait node con fecha absoluta", "Cálculo: fecha_instalacion + 4 días"]
       },
       {
         id: "p3-3",
         type: "api_call",
-        title: "POST /v1/messages/send → WhatsApp packs mantenimiento",
-        subtitle: "Oferta de mantenimiento específica para césped",
+        title: "Se envía oferta de mantenimiento",
+        subtitle: "Mensaje de WhatsApp con el catálogo de packs para cuidar el césped.",
         api: ["Callbell"],
-        details: [
-          "type: 'image' (si incluye catálogo) o 'text'",
-          "content.url: URL pública de imagen del catálogo",
-          "OBLIGATORIO: usar template si han pasado >24h"
-        ]
+        details: ["POST /v1/messages/send", "type: 'image' o 'text'", "Uso de template si han pasado >24h"]
       },
       {
         id: "p3-4",
         type: "action",
-        title: "Marcar x_pack_enviado = True en Odoo",
-        subtitle: "Evitar reenvíos en siguientes ejecuciones del cron",
+        title: "Se registra el envío de la oferta",
+        subtitle: "Se marca en la ficha del cliente para evitar duplicidad en el futuro.",
         api: ["Odoo"],
-        details: ["method: write sobre sale.order o crm.lead", "x_pack_enviado = True", "x_pack_fecha_envio = timestamp"]
+        details: ["Acción: Marcar x_pack_enviado = True en Odoo", "method: write sobre sale.order o crm.lead"]
       }
     ]
   },
   {
     id: "04",
     title: "BBDD Arquitectos",
-    description: "Secuencia de prospección a arquitectos desde Google Sheets",
+    description: "Cuando el equipo añade un arquitecto a la lista y lo marca como 'pendiente', el sistema le manda los mensajes de prospección de forma automática.",
     apis: ["Sheets", "Callbell"],
     steps: [
       {
         id: "p4-1",
         type: "trigger",
-        title: "Estado = 'pendiente' en Google Sheets",
-        subtitle: "El equipo cambia manualmente el estado de un arquitecto a 'pendiente'",
+        title: "Se detecta un nuevo arquitecto pendiente",
+        subtitle: "El sistema revisa la lista y busca contactos marcados para iniciar contacto.",
         api: ["Sheets", "n8n"],
-        details: [
-          "Polling cada 15 minutos",
-          "GET /v4/spreadsheets/{id}/values/Sheet1",
-          "Filtrar filas donde columna Estado = 'pendiente' y WA_enviado_1 = vacío"
-        ]
+        details: ["Trigger: Estado = 'pendiente' en Google Sheets", "Polling cada 15 minutos", "GET /v4/spreadsheets/{id}/values/Sheet1"]
       },
       {
         id: "p4-2",
         type: "api_call",
-        title: "POST /v1/messages/send → Mensaje 1",
-        subtitle: "Enviar el contenido de la columna 'Mensaje' del Sheet",
+        title: "Se envía el primer mensaje de contacto",
+        subtitle: "Presentación automática enviada por WhatsApp.",
         api: ["Callbell"],
-        details: ["type: 'text'", "content.text: valor de columna 'Mensaje' de esa fila", "Guardar uuid de Callbell"]
+        details: ["POST /v1/messages/send", "content.text: valor de columna 'Mensaje'"]
       },
       {
         id: "p4-3",
         type: "action",
-        title: "Actualizar WA_enviado_1 = timestamp en Sheets",
-        subtitle: "Marcar que el primer mensaje fue enviado y cuándo",
+        title: "Se marca la fecha de contacto",
+        subtitle: "El sistema anota cuándo se envió el primer mensaje.",
         api: ["Sheets"],
-        details: ["PUT /v4/spreadsheets/{id}/values/{range}", "Columna WA_enviado_1 = ISO timestamp", "Estado → 'enviado_1'"]
+        details: ["Acción: Actualizar WA_enviado_1 = timestamp en Sheets", "PUT /v4/spreadsheets/{id}/values/{range}"]
       },
       {
         id: "p4-4",
         type: "wait",
-        title: "Esperar 2 días sin respuesta",
-        subtitle: "n8n verifica si WA_enviado_1 + 2 días <= ahora y WA_enviado_2 vacío",
+        title: "El sistema espera 2 días",
+        subtitle: "Pausa para ver si el arquitecto responde al primer contacto.",
         api: ["n8n", "Callbell"],
-        details: ["Polling compara timestamp de WA_enviado_1", "Si Callbell webhook detecta respuesta → actualizar estado a 'contestado' y parar"]
+        details: ["Wait node: 2 días sin respuesta", "Polling compara timestamp de WA_enviado_1"]
       },
       {
         id: "p4-5",
         type: "decision",
-        title: "¿Ha contestado el arquitecto?",
-        subtitle: "Verificar si llegó mensaje entrante de ese número",
+        title: "¿Ha respondido el arquitecto?",
+        subtitle: "Comprobación automática de mensajes entrantes.",
         api: ["Callbell"],
-        details: ["Webhook message_created de Callbell", "Comparar número de teléfono con filas del Sheet"]
+        details: ["Decisión: ¿Ha contestado el arquitecto?", "Webhook message_created de Callbell"]
       },
       {
         id: "p4-5-yes",
         type: "branch_yes",
         branchLabel: "SÍ — Ha respondido",
-        title: "Actualizar estado = 'contestado' en Sheets",
-        subtitle: "Fin del flujo automatizado para este contacto",
+        title: "Se marca como interesado",
+        subtitle: "El sistema detiene la secuencia automática al recibir respuesta.",
         api: ["Sheets"],
-        details: ["PUT estado = 'contestado'", "Registrar timestamp de respuesta"]
+        details: ["Acción: Actualizar estado = 'contestado' en Sheets", "PUT estado = 'contestado'"]
       },
       {
         id: "p4-5-no",
         type: "branch_no",
         branchLabel: "NO — Sin respuesta tras 2 días",
-        title: "POST /v1/messages/send → Mensaje 2",
-        subtitle: "Enviar el contenido de la columna 'Mensaje 2' del Sheet",
+        title: "Se envía el segundo mensaje de seguimiento",
+        subtitle: "Recordatorio automático para retomar el contacto.",
         api: ["Callbell", "Sheets"],
-        details: ["type: 'text'", "content.text: columna 'Mensaje 2'", "Actualizar WA_enviado_2 = timestamp", "Estado → 'enviado_2'"]
+        details: ["POST /v1/messages/send → Mensaje 2", "content.text: columna 'Mensaje 2'"]
       }
     ]
   },
   {
     id: "05",
     title: "Venta Cruzada",
-    description: "Mensaje de cross-sell automático según producto comprado (5 productos)",
+    description: "Cuando un cliente compra uno de los 5 productos, recibe automáticamente un mensaje con productos complementarios adaptado a lo que compró.",
     apis: ["Odoo", "Callbell"],
     steps: [
       {
         id: "p5-1",
         type: "trigger",
-        title: "Pedido completado/instalado en Odoo",
-        subtitle: "n8n detecta sale.order con x_instalado = True y x_cross_sell_enviado = False",
+        title: "Se detecta una compra finalizada",
+        subtitle: "El sistema identifica pedidos instalados listos para venta cruzada.",
         api: ["Odoo", "n8n"],
-        details: ["Polling cada 30 minutos", "Modelo: sale.order", "Leer líneas: sale.order.line para detectar producto"]
+        details: ["Trigger: Pedido completado/instalado en Odoo", "Modelo: sale.order", "Leer líneas: sale.order.line"]
       },
       {
         id: "p5-2",
         type: "decision",
         title: "¿Qué producto se compró?",
-        subtitle: "Switch node en n8n: 5 ramas según producto",
+        subtitle: "El sistema detecta qué producto compró el cliente para elegir el complemento ideal.",
         api: ["n8n"],
-        details: [
-          "Switch node con 5 ramas",
-          "Producto 1: mensaje cross-sell específico A",
-          "Producto 2: mensaje cross-sell específico B",
-          "Producto 3: mensaje cross-sell específico C",
-          "Producto 4: mensaje cross-sell específico D",
-          "Producto 5: mensaje cross-sell específico E"
-        ]
+        details: ["Switch node en n8n: 5 ramas según producto", "Lógica de recomendación A/B/C/D/E"]
       },
       {
         id: "p5-3",
         type: "api_call",
-        title: "POST /v1/messages/send → WA cross-sell por producto",
-        subtitle: "Mensaje personalizado según el producto adquirido",
+        title: "Se envía recomendación por WhatsApp",
+        subtitle: "Mensaje personalizado con el producto que mejor combina con su compra.",
         api: ["Callbell"],
-        details: [
-          "type: 'text' o 'template' según ventana 24h",
-          "Contenido diferente para cada uno de los 5 productos",
-          "Puede incluir imagen del producto complementario"
-        ]
+        details: ["POST /v1/messages/send", "Contenido dinámico según el producto detectado"]
       },
       {
         id: "p5-4",
         type: "action",
-        title: "Marcar x_cross_sell_enviado = True en Odoo",
-        subtitle: "Registrar qué producto generó el cross-sell",
+        title: "Se marca como completado",
+        subtitle: "Se registra la oferta enviada para no repetirla.",
         api: ["Odoo"],
-        details: ["method: write", "x_cross_sell_enviado = True", "x_cross_sell_producto = nombre del producto detectado"]
+        details: ["Acción: Marcar x_cross_sell_enviado = True en Odoo", "method: write"]
       }
     ]
   },
   {
     id: "06",
     title: "Lead Scoring Barbacoa",
-    description: "Cualificación conversacional de leads de barbacoa con IA restrictiva",
+    description: "El sistema contacta a los interesados en barbacoas, evalúa si son clientes potenciales y les guía paso a paso para personalizar su barbacoa por WhatsApp.",
     apis: ["Odoo", "Callbell", "IA"],
     steps: [
       {
         id: "p6-1",
         type: "trigger",
-        title: "Nuevo lead de barbacoa en Odoo",
-        subtitle: "n8n detecta crm.lead con tag/categoría = 'barbacoa'",
+        title: "Llega un interesado en barbacoas",
+        subtitle: "El sistema identifica nuevos leads interesados específicamente en este producto.",
         api: ["Odoo", "n8n"],
-        details: ["Polling sobre crm.lead", "Filtro por tag_ids que incluya 'barbacoa'", "x_personalizador_estado = null (no iniciado)"]
+        details: ["Trigger: Nuevo lead de barbacoa en Odoo", "Filtro por tag_ids que incluya 'barbacoa'"]
       },
       {
         id: "p6-2",
         type: "api_call",
-        title: "POST /v1/messages/send → Bienvenida + Modelos y FAQs",
-        subtitle: "Primer contacto: presentación y respuesta a preguntas frecuentes",
+        title: "Se envía información y preguntas frecuentes",
+        subtitle: "Primer contacto con catálogo de modelos y respuestas a dudas comunes.",
         api: ["Callbell"],
-        details: [
-          "type: 'text'",
-          "Mensaje de bienvenida",
-          "Info sobre los modelos disponibles",
-          "Respuesta a FAQs más comunes"
-        ]
+        details: ["POST /v1/messages/send", "Mensaje de bienvenida + FAQs"]
       },
       {
         id: "p6-3",
         type: "ai",
-        title: "FASE 1: Lead Scoring — Preguntas de cualificación",
-        subtitle: "El sistema envía preguntas para evaluar presupuesto, urgencia e intención",
+        title: "El asistente evalúa al cliente",
+        subtitle: "Se realizan preguntas para entender el presupuesto y la urgencia del proyecto.",
         api: ["Callbell", "Odoo"],
-        details: [
-          "Preguntas: presupuesto disponible, tipo de instalación, urgencia",
-          "Respuestas libres (el cliente puede responder como quiera)",
-          "Puntuación acumulada en x_lead_score",
-          "Estado: x_personalizador_estado = 'scoring'"
-        ]
+        details: ["FASE 1: Lead Scoring", "Preguntas: presupuesto, tipo instalación, urgencia", "Puntuación en x_lead_score"]
       },
       {
         id: "p6-4",
         type: "decision",
-        title: "¿Lead cualificado? (score >= umbral)",
-        subtitle: "Evaluar si el lead tiene suficiente score para pasar al personalizador",
+        title: "¿Es un cliente potencial cualificado?",
+        subtitle: "El sistema analiza las respuestas para decidir si pasar al siguiente nivel.",
         api: ["n8n"],
-        details: ["Umbral configurable (ej: score >= 6 sobre 10)", "Si no cualifica → enviar mensaje de seguimiento manual"]
+        details: ["Decisión: ¿Lead cualificado? (score >= umbral)", "Umbral configurable (ej: score >= 6)"]
       },
       {
         id: "p6-4-no",
         type: "branch_no",
         branchLabel: "NO — Score bajo",
-        title: "Notificar al equipo para seguimiento manual",
-        subtitle: "El lead no cumple criterios de cualificación automática",
+        title: "Se avisa al equipo para atención personal",
+        subtitle: "El cliente requiere un trato manual por parte de un comercial.",
         api: ["Odoo"],
-        details: ["Actualizar etapa en pipeline: 'No cualificado'", "Crear tarea/actividad en Odoo para seguimiento manual"]
+        details: ["Acción: Notificar al equipo para seguimiento manual", "Actualizar etapa: 'No cualificado'"]
       },
       {
         id: "p6-4-yes",
         type: "branch_yes",
         branchLabel: "SÍ — Lead cualificado",
-        title: "FASE 2: Personalizador — Preguntas CERRADAS",
-        subtitle: "El sistema SOLO acepta las respuestas válidas definidas por pregunta",
+        title: "El asistente guía la personalización",
+        subtitle: "Preguntas paso a paso para configurar la barbacoa ideal por WhatsApp.",
         api: ["Callbell", "Odoo"],
-        details: [
-          "x_personalizador_estado = 'en_curso'",
-          "x_personalizador_step = 0 (pregunta actual)",
-          "REGLA CRÍTICA: si respuesta no es válida → repreguntar",
-          "Ejemplo: '¿Chimenea derecha o izquierda?' → solo acepta 'Derecha' / 'Izquierda'",
-          "Cada respuesta se guarda como nota en crm.lead"
-        ]
+        details: ["FASE 2: Personalizador — Preguntas CERRADAS", "REGLA: si respuesta no es válida → repreguntar"]
       },
       {
         id: "p6-5",
         type: "action",
-        title: "Guardar configuración completa en Odoo",
-        subtitle: "Todas las respuestas del personalizador quedan registradas",
+        title: "Se guarda la configuración elegida",
+        subtitle: "Todas las opciones seleccionadas por el cliente quedan registradas.",
         api: ["Odoo"],
-        details: [
-          "method: create en mail.message (notas internas)",
-          "x_personalizador_estado = 'completado'",
-          "Etapa del pipeline → 'Cualificado'"
-        ]
+        details: ["Acción: Guardar configuración completa en Odoo", "method: create en mail.message"]
       },
       {
         id: "p6-6",
         type: "api_call",
-        title: "POST /v1/messages/send → Resumen de configuración",
-        subtitle: "Enviar al cliente el resumen completo de su barbacoa personalizada",
+        title: "Se envía resumen de la barbacoa",
+        subtitle: "El cliente recibe por WhatsApp el detalle de su configuración personalizada.",
         api: ["Callbell"],
-        details: [
-          "Mensaje con todas las opciones elegidas",
-          "Próximos pasos (visita, presupuesto formal, etc.)",
-          "type: 'text'"
-        ]
+        details: ["POST /v1/messages/send", "Resumen de opciones elegidas"]
       }
     ]
   }
@@ -431,28 +361,30 @@ const PROJECTS = [
 // --- COMPONENTS ---
 
 const ApiBadge = ({ name }: { name: string }) => {
-  const styles: Record<string, string> = {
-    Odoo: "bg-[#92400E] text-white",
-    Callbell: "bg-[#065F46] text-white",
-    Sheets: "bg-[#1E3A5F] text-white",
-    Email: "bg-[#4C1D95] text-white",
-    n8n: "bg-[#374151] text-white",
-    IA: "bg-[#7C3AED] text-white",
+  const mapping: Record<string, { label: string, color: string }> = {
+    Odoo: { label: "CRM", color: "bg-[#92400E]" },
+    Callbell: { label: "WhatsApp", color: "bg-[#065F46]" },
+    Sheets: { label: "Base de datos", color: "bg-[#1E3A5F]" },
+    Email: { label: "Email", color: "bg-[#4C1D95]" },
+    n8n: { label: "Automatización", color: "bg-[#374151]" },
+    IA: { label: "Asistente IA", color: "bg-[#7C3AED]" },
   };
 
-  const icons: Record<string, React.ReactNode> = {
-    Odoo: <Database size={10} />,
-    Callbell: <MessageSquare size={10} />,
-    Sheets: <Table size={10} />,
-    Email: <Mail size={10} />,
-    n8n: <Zap size={10} />,
-    IA: <Bot size={10} />,
-  };
+  const info = mapping[name] || { label: name, color: "bg-gray-700" };
 
   return (
-    <span className={cn("flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider", styles[name] || "bg-gray-700 text-gray-300")}>
-      {icons[name]} {name}
-    </span>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider text-white cursor-help", info.color)}>
+            {info.label}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="bg-slate-900 border-white/10 text-white text-[10px]">
+          Herramienta técnica: {name}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 
@@ -492,13 +424,17 @@ const ApiReferenceModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =
         <div className="p-6 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Code2 className="text-[#1A56DB]" />
-            <h3 className="text-xl font-bold text-white">Referencia de APIs</h3>
+            <h3 className="text-xl font-bold text-white">Referencia técnica para el equipo de desarrollo</h3>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
             <X size={20} />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+          <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl text-xs text-blue-200 leading-relaxed">
+            <Info size={14} className="inline mr-2 mb-0.5" />
+            Esta sección contiene los endpoints y modelos de datos necesarios para la implementación. No es necesaria para la validación del cliente.
+          </div>
           {apis.map((api) => (
             <div key={api.name} className="space-y-4">
               <h4 className="text-sm font-bold text-[#1A56DB] uppercase tracking-widest">{api.name}</h4>
@@ -529,18 +465,18 @@ const ApiReferenceModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =
 };
 
 const FlowStep = ({ step, isBranch = false }: { step: any, isBranch?: boolean }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  const config: Record<string, any> = {
-    trigger: { icon: <Zap size={18} />, color: "border-[#1A56DB]", bg: "bg-[#1A56DB]" },
-    action: { icon: <ArrowRight size={18} />, color: "border-[#1A56DB]", bg: "bg-[#0f2744]" },
-    wait: { icon: <Clock size={18} />, color: "border-[#F59E0B]", bg: "bg-[#78350F22]" },
-    decision: { icon: <GitBranch size={18} />, color: "border-[#7C3AED]", bg: "bg-[#312E8122]" },
-    branch_yes: { icon: <CheckCircle2 size={18} />, color: "border-[#10B981]", bg: "bg-[#064E3B22]" },
-    branch_no: { icon: <XCircle size={18} />, color: "border-[#EF4444]", bg: "bg-[#7F1D1D22]" },
-    api_call: { icon: <Link2 size={18} />, color: "border-[#94A3B8]", bg: "bg-[#0f2744]" },
-    ai: { icon: <Bot size={18} />, color: "border-[#7C3AED]", bg: "bg-[#4C1D9522]" },
-    end: { icon: <CheckCircle2 size={18} />, color: "border-[#10B981]", bg: "bg-[#064E3B]" },
+  const config: Record<string, { emoji: string, label: string, color: string, bg: string }> = {
+    trigger: { emoji: "🔔", label: "INICIO", color: "border-[#1A56DB]", bg: "bg-[#1A56DB]" },
+    action: { emoji: "✅", label: "ACCIÓN", color: "border-[#1A56DB]", bg: "bg-[#0f2744]" },
+    wait: { emoji: "⏳", label: "ESPERA", color: "border-[#F59E0B]", bg: "bg-[#78350F22]" },
+    decision: { emoji: "🔀", label: "CONDICIÓN", color: "border-[#7C3AED]", bg: "bg-[#312E8122]" },
+    branch_yes: { emoji: "👍", label: "", color: "border-[#10B981]", bg: "bg-[#064E3B22]" },
+    branch_no: { emoji: "👎", label: "", color: "border-[#EF4444]", bg: "bg-[#7F1D1D22]" },
+    api_call: { emoji: "📤", label: "COMUNICACIÓN", color: "border-[#94A3B8]", bg: "bg-[#0f2744]" },
+    ai: { emoji: "🤖", label: "ASISTENTE IA", color: "border-[#7C3AED]", bg: "bg-[#4C1D9522]" },
+    end: { emoji: "🏁", label: "FIN", color: "border-[#10B981]", bg: "bg-[#064E3B]" },
   };
 
   const current = config[step.type] || config.action;
@@ -548,9 +484,8 @@ const FlowStep = ({ step, isBranch = false }: { step: any, isBranch?: boolean })
   return (
     <div className={cn("relative w-full max-w-2xl mx-auto group", isBranch && "max-w-full")}>
       <div 
-        onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "relative z-10 p-4 rounded-xl border-l-4 cursor-pointer transition-all duration-300 hover:translate-x-1",
+          "relative z-10 p-4 rounded-xl border-l-4 transition-all duration-300",
           current.bg,
           current.color,
           "border-y border-r border-white/5 shadow-xl"
@@ -558,8 +493,11 @@ const FlowStep = ({ step, isBranch = false }: { step: any, isBranch?: boolean })
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4">
-            <div className={cn("p-2 rounded-lg text-white", step.type === 'trigger' ? 'bg-white/20' : 'bg-[#1A56DB22]')}>
-              {current.icon}
+            <div className="flex flex-col items-center gap-1 shrink-0">
+              <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center text-xl", step.type === 'trigger' ? 'bg-white/20' : 'bg-[#1A56DB22]')}>
+                {current.emoji}
+              </div>
+              {current.label && <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">{current.label}</span>}
             </div>
             <div>
               {step.branchLabel && (
@@ -570,31 +508,37 @@ const FlowStep = ({ step, isBranch = false }: { step: any, isBranch?: boolean })
                   {step.branchLabel}
                 </span>
               )}
-              <h4 className={cn(
-                "font-bold text-slate-100 leading-tight",
-                step.type === 'api_call' && "font-mono text-sm"
-              )}>
+              <h4 className="font-bold text-slate-100 leading-tight text-base">
                 {step.title}
               </h4>
-              <p className="text-sm text-slate-400 mt-1">{step.subtitle}</p>
+              <p className="text-sm text-slate-400 mt-1 leading-relaxed">{step.subtitle}</p>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-col items-end gap-3 shrink-0">
             <div className="flex gap-1">
               {step.api?.map((a: string) => <ApiBadge key={a} name={a} />)}
             </div>
-            {isOpen ? <ChevronDown size={16} className="text-slate-500" /> : <ChevronRight size={16} className="text-slate-500" />}
+            <button 
+              onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+              className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 hover:text-slate-300 transition-colors group/btn"
+            >
+              {isDetailsOpen ? "Ocultar" : "Ver detalles técnicos"}
+              {isDetailsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} className="group-hover/btn:translate-y-0.5 transition-transform" />}
+            </button>
           </div>
         </div>
 
         <div className={cn(
           "overflow-hidden transition-all duration-500 ease-in-out",
-          isOpen ? "max-h-96 mt-4 opacity-100" : "max-h-0 opacity-0"
+          isDetailsOpen ? "max-h-96 mt-4 opacity-100" : "max-h-0 opacity-0"
         )}>
-          <div className="pt-4 border-t border-white/10">
+          <div className="pt-4 border-t border-white/10 bg-black/20 -mx-4 px-4 pb-2">
+            <p className="text-[10px] font-bold text-[#1A56DB] uppercase tracking-widest mb-3 flex items-center gap-2">
+              <span className="text-base">🔧</span> Detalles técnicos
+            </p>
             <ul className="space-y-2">
               {step.details?.map((detail: string, i: number) => (
-                <li key={i} className="flex items-start gap-2 text-xs text-slate-300 font-mono">
+                <li key={i} className="flex items-start gap-2 text-[11px] text-slate-400 font-mono">
                   <span className="text-[#1A56DB]">›</span>
                   {detail}
                 </li>
