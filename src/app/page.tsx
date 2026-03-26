@@ -362,7 +362,7 @@ const PROJECTS = [
 
 const ApiBadge = ({ name }: { name: string }) => {
   const mapping: Record<string, { label: string, color: string }> = {
-    Odoo: { label: "CRM", color: "bg-[#92400E]" },
+    Odoo: { label: "Odoo", color: "bg-[#92400E]" },
     Callbell: { label: "WhatsApp", color: "bg-[#065F46]" },
     Sheets: { label: "Base de datos", color: "bg-[#1E3A5F]" },
     Email: { label: "Email", color: "bg-[#4C1D95]" },
