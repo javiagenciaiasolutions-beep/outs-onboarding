@@ -25,7 +25,7 @@ const PROJECTS = [
   {
     id: "01",
     title: "Nuevo Lead",
-    description: "Cuando llega un nuevo cliente, el sistema le da la bienvenida automáticamente, le pide las fotos necesarias y hace seguimiento si no responde.",
+    description: "Cuando llega un nuevo cliente, el sistema le da la bienvenida automáticamente, le pide las fotos necesarias y hace seguimiento inteligente si no responde.",
     apis: ["Odoo", "n8n", "Callbell", "Email"],
     steps: [
       {
@@ -62,43 +62,61 @@ const PROJECTS = [
       },
       {
         id: "p1-5",
-        type: "wait",
-        title: "El sistema espera 1 día hábil",
-        subtitle: "Damos tiempo al cliente para que envíe el material solicitado.",
-        api: ["n8n"],
-        details: ["Wait node + lógica de días laborables", "Excluye sábados, domingos y festivos"]
-      },
-      {
-        id: "p1-6",
         type: "decision",
-        title: "¿Ha respondido el cliente?",
-        subtitle: "El sistema comprueba si hemos recibido los archivos o un mensaje.",
-        api: ["Callbell"],
-        details: ["Webhook entrante de Callbell", "Verificar en Odoo si x_material_recibido = True"]
+        title: "¿Envía el material solicitado?",
+        subtitle: "El sistema espera la respuesta. Si llega, procesa al instante; si no, espera 1 día hábil.",
+        api: ["Callbell", "n8n"],
+        details: ["Webhook entrante de Callbell", "Wait for Webhook (max 24h laborables)", "Verificar adjuntos en el mensaje"]
       },
       {
-        id: "p1-7-yes",
+        id: "p1-5-yes",
         type: "branch_yes",
-        branchLabel: "SÍ — Ha enviado material",
+        branchLabel: "SÍ — Envía material",
         title: "Se guardan los archivos automáticamente",
-        subtitle: "El sistema descarga las fotos y las adjunta a la ficha del cliente.",
+        subtitle: "El sistema descarga las fotos y las vincula directamente a la ficha de Odoo.",
         api: ["Callbell", "Odoo"],
-        details: ["GET archivo desde attachments[].url de Callbell", "Convertir a Base64", "POST ir.attachment en Odoo con res_model: crm.lead"]
+        details: ["GET archivo desde Callbell", "Convertir a Base64", "POST ir.attachment en Odoo vinculado al Lead"]
       },
       {
-        id: "p1-7-no",
+        id: "p1-5-no",
         type: "branch_no",
-        branchLabel: "NO — Sin respuesta",
+        branchLabel: "NO — Sin respuesta (24h)",
         title: "Se envía un recordatorio amable",
         subtitle: "Segundo contacto por WhatsApp para solicitar de nuevo el material.",
         api: ["Callbell"],
         details: ["POST /v1/messages/send tipo text", "Texto de recordatorio amable"]
       },
       {
-        id: "p1-8",
+        id: "p1-6",
+        type: "decision",
+        title: "¿Responde al recordatorio?",
+        subtitle: "Nueva espera de 1 día hábil para recibir el material tras el aviso.",
+        api: ["Callbell", "n8n"],
+        details: ["Webhook entrante de Callbell", "Wait for Webhook (max 24h laborables)"]
+      },
+      {
+        id: "p1-6-yes",
+        type: "branch_yes",
+        branchLabel: "SÍ — Responde ahora",
+        title: "Se vinculan los archivos a Odoo",
+        subtitle: "El sistema procesa el material recibido y lo adjunta a la ficha del cliente.",
+        api: ["Callbell", "Odoo"],
+        details: ["Procesamiento de adjuntos", "POST ir.attachment en Odoo"]
+      },
+      {
+        id: "p1-6-no",
+        type: "branch_no",
+        branchLabel: "NO — Sigue sin responder",
+        title: "Se envía audio preestablecido",
+        subtitle: "Último intento de contacto mediante un mensaje de voz automático.",
+        api: ["Callbell"],
+        details: ["POST /v1/messages/send", "type: 'audio'", "url: enlace al archivo de audio pregrabado"]
+      },
+      {
+        id: "p1-7",
         type: "api_call",
-        title: "Se registra la conversación",
-        subtitle: "Toda la actividad queda guardada en el historial del cliente.",
+        title: "Se registra toda la actividad",
+        subtitle: "El historial de mensajes y envíos queda guardado en la ficha de Odoo.",
         api: ["Odoo"],
         details: ["POST mail.message → Log conversación en Odoo", "model: mail.message", "res_id: ID del crm.lead"]
       }
