@@ -26,15 +26,15 @@ const PROJECTS = [
     id: "01",
     title: "Nuevo Lead",
     description: "Cuando llega un nuevo cliente, el sistema le da la bienvenida automáticamente, le pide las fotos necesarias y hace seguimiento inteligente si no responde.",
-    apis: ["Odoo", "n8n", "Callbell", "Email"],
+    apis: ["Odoo", "n8n", "Evolution API", "Email"],
     steps: [
       {
         id: "p1-1",
         type: "trigger",
         title: "Se crea un nuevo cliente en el sistema",
-        subtitle: "El sistema detecta automáticamente cuando alguien se registra.",
+        subtitle: "El sistema detecta automáticamente cuando alguien se registra. Existe una casilla en el lead que indica en qué está interesado para dar contexto al asesor.",
         api: ["Odoo", "n8n"],
-        details: ["Trigger: Nuevo contacto creado en Odoo", "Filtro: Casilla de producto NO es Barbacoa", "Modelo: crm.lead / res.partner", "Polling cada 10 minutos"]
+        details: ["Trigger: Nuevo contacto creado en Odoo", "Contexto: Leer casilla 'Producto de Interés'", "Filtro: Casilla de producto NO es Barbacoa", "Modelo: crm.lead / res.partner", "Polling cada 10 minutos"]
       },
       {
         id: "p1-3",
@@ -49,7 +49,7 @@ const PROJECTS = [
         type: "api_call",
         title: "Se envía mensaje de bienvenida por WhatsApp",
         subtitle: "Se solicita al cliente las fotos y vídeos necesarios para el presupuesto.",
-        api: ["Callbell"],
+        api: ["Evolution API"],
         details: ["POST /v1/messages/send", "type: 'text'", "to: teléfono del contacto (E.164)"]
       },
       {
@@ -57,8 +57,8 @@ const PROJECTS = [
         type: "decision",
         title: "¿Envía el material solicitado?",
         subtitle: "El sistema espera la respuesta. Si llega, procesa al instante; si no, espera 1 día hábil.",
-        api: ["Callbell", "n8n"],
-        details: ["Webhook entrante de Callbell", "Wait for Webhook (max 24h laborables)", "Verificar adjuntos en el mensaje"]
+        api: ["Evolution API", "n8n"],
+        details: ["Webhook entrante de Evolution API", "Wait for Webhook (max 24h laborables)", "Verificar adjuntos en el mensaje"]
       },
       {
         id: "p1-5-yes",
@@ -66,8 +66,8 @@ const PROJECTS = [
         branchLabel: "SÍ — Envía material",
         title: "Se guardan los archivos automáticamente",
         subtitle: "El sistema descarga las fotos y las vincula directamente a la ficha de Odoo.",
-        api: ["Callbell", "Odoo"],
-        details: ["GET archivo desde Callbell", "Convertir a Base64", "POST ir.attachment en Odoo vinculado al Lead"]
+        api: ["Evolution API", "Odoo"],
+        details: ["GET archivo desde Evolution API", "Convertir a Base64", "POST ir.attachment en Odoo vinculado al Lead"]
       },
       {
         id: "p1-5-no",
@@ -75,7 +75,7 @@ const PROJECTS = [
         branchLabel: "NO — Sin respuesta (24h)",
         title: "Se envía un recordatorio amable",
         subtitle: "Segundo contacto por WhatsApp para solicitar de nuevo el material.",
-        api: ["Callbell"],
+        api: ["Evolution API"],
         details: ["POST /v1/messages/send tipo text", "Texto de recordatorio amable"]
       },
       {
@@ -83,8 +83,8 @@ const PROJECTS = [
         type: "decision",
         title: "¿Responde al recordatorio?",
         subtitle: "Nueva espera de 1 día hábil para recibir el material tras el aviso.",
-        api: ["Callbell", "n8n"],
-        details: ["Webhook entrante de Callbell", "Wait for Webhook (max 24h laborables)"]
+        api: ["Evolution API", "n8n"],
+        details: ["Webhook entrante de Evolution API", "Wait for Webhook (max 24h laborables)"]
       },
       {
         id: "p1-6-yes",
@@ -92,7 +92,7 @@ const PROJECTS = [
         branchLabel: "SÍ — Responde ahora",
         title: "Se vinculan los archivos a Odoo",
         subtitle: "El sistema procesa el material recibido y lo adjunta a la ficha del cliente.",
-        api: ["Callbell", "Odoo"],
+        api: ["Evolution API", "Odoo"],
         details: ["Procesamiento de adjuntos", "POST ir.attachment en Odoo"]
       },
       {
@@ -101,7 +101,7 @@ const PROJECTS = [
         branchLabel: "NO — Sigue sin responder",
         title: "Se envía audio preestablecido",
         subtitle: "Último intento de contacto mediante un mensaje de voz automático.",
-        api: ["Callbell"],
+        api: ["Evolution API"],
         details: ["POST /v1/messages/send", "type: 'audio'", "url: enlace al archivo de audio pregrabado"]
       },
       {
@@ -150,7 +150,7 @@ const PROJECTS = [
     id: "03",
     title: "Packs Mantenimiento",
     description: "4 días después de instalar el césped, el cliente recibe automáticamente una oferta de pack de mantenimiento.",
-    apis: ["Odoo", "Callbell"],
+    apis: ["Odoo", "Evolution API"],
     steps: [
       {
         id: "p3-1",
@@ -173,7 +173,7 @@ const PROJECTS = [
         type: "api_call",
         title: "Se envía un vídeo por WhatsApp",
         subtitle: "Primer mensaje de la oferta de mantenimiento mostrando un vídeo promocional.",
-        api: ["Callbell"],
+        api: ["Evolution API"],
         details: ["POST /v1/messages/send", "type: 'video'"]
       },
       {
@@ -189,7 +189,7 @@ const PROJECTS = [
         type: "api_call",
         title: "Se envía PDF con precios",
         subtitle: "Mensaje de WhatsApp con el documento PDF de los precios de packs.",
-        api: ["Callbell"],
+        api: ["Evolution API"],
         details: ["POST /v1/messages/send", "type: 'document'"]
       },
       {
@@ -206,7 +206,7 @@ const PROJECTS = [
     id: "04",
     title: "BBDD Arquitectos",
     description: "Cuando el equipo añade un arquitecto a la lista y lo marca como 'pendiente', el sistema le manda los mensajes de prospección según su tipo de cliente desde un Excel de Drive.",
-    apis: ["Sheets", "Callbell"],
+    apis: ["Sheets", "Evolution API"],
     steps: [
       {
         id: "p4-1",
@@ -221,7 +221,7 @@ const PROJECTS = [
         type: "api_call",
         title: "Se envía el primer mensaje personalizado",
         subtitle: "Presentación por WhatsApp eligiendo uno de los 10 mensajes posibles según el tipo de cliente.",
-        api: ["Callbell"],
+        api: ["Evolution API"],
         details: ["POST /v1/messages/send", "content.text: mensaje asociado al 'tipo de cliente' en Excel"]
       },
       {
@@ -237,7 +237,7 @@ const PROJECTS = [
         type: "wait",
         title: "El sistema espera 2 días",
         subtitle: "Pausa para ver si el arquitecto responde al primer contacto.",
-        api: ["n8n", "Callbell"],
+        api: ["n8n", "Evolution API"],
         details: ["Wait node: 2 días sin respuesta", "Polling compara timestamp de WA_enviado_1"]
       },
       {
@@ -245,8 +245,8 @@ const PROJECTS = [
         type: "decision",
         title: "¿Ha respondido el arquitecto?",
         subtitle: "Comprobación automática de mensajes entrantes.",
-        api: ["Callbell"],
-        details: ["Decisión: ¿Ha contestado el arquitecto?", "Webhook message_created de Callbell"]
+        api: ["Evolution API"],
+        details: ["Decisión: ¿Ha contestado el arquitecto?", "Webhook message_created de Evolution API"]
       },
       {
         id: "p4-5-yes",
@@ -263,7 +263,7 @@ const PROJECTS = [
         branchLabel: "NO — Sin respuesta tras 2 días",
         title: "Se envía el segundo mensaje de seguimiento",
         subtitle: "Recordatorio automático para retomar el contacto.",
-        api: ["Callbell", "Sheets"],
+        api: ["Evolution API", "Sheets"],
         details: ["POST /v1/messages/send → Mensaje 2", "content.text: columna 'Mensaje 2'"]
       }
     ]
@@ -272,7 +272,7 @@ const PROJECTS = [
     id: "05",
     title: "Venta Cruzada",
     description: "Cuando un cliente compra uno de los 5 productos, recibe automáticamente un mensaje con productos complementarios adaptado a lo que compró.",
-    apis: ["Odoo", "Callbell", "Sheets"],
+    apis: ["Odoo", "Evolution API", "Sheets"],
     steps: [
       {
         id: "p5-1",
@@ -295,7 +295,7 @@ const PROJECTS = [
         type: "api_call",
         title: "Se envía recomendación por WhatsApp",
         subtitle: "Mensaje personalizado con el producto que mejor combina con su compra.",
-        api: ["Callbell"],
+        api: ["Evolution API"],
         details: ["POST /v1/messages/send", "Contenido dinámico según el producto detectado"]
       },
       {
@@ -312,22 +312,22 @@ const PROJECTS = [
     id: "06",
     title: "MVP Asistente WhatsApp (Barbacoa)",
     description: "Producto Mínimo Viable (MVP) de un asistente por WhatsApp para barbacoas. Pendiente de definición final por parte del cliente sobre preguntas de cualificación.",
-    apis: ["Callbell", "IA"],
+    apis: ["Evolution API", "IA"],
     steps: [
       {
         id: "p6-1",
         type: "trigger",
         title: "Llega un interesado en barbacoas",
-        subtitle: "El asistente recibe el mensaje del cliente interesado a través de WhatsApp.",
-        api: ["Callbell", "n8n"],
-        details: ["Webhook de entrada de Callbell (WhatsApp)"]
+        subtitle: "El asistente recibe el mensaje del cliente interesado a través de WhatsApp. Se consulta la casilla en Odoo que refleja exactamente en qué está interesado el lead para mayor contexto.",
+        api: ["Evolution API", "n8n"],
+        details: ["Webhook de entrada de Evolution API (WhatsApp)", "Contexto: Casilla de Odoo con el producto/interés específico"]
       },
       {
         id: "p6-2",
         type: "ai",
         title: "Asistente responde con información base",
         subtitle: "El agente conversa usando un contexto y documentación base inicial que nos pasan (MVP).",
-        api: ["IA", "Callbell"],
+        api: ["IA", "Evolution API"],
         details: ["Integración LLM / Asistente MVP", "En espera de analizar comportamiento de chat para definir preguntas de cualificación definitivas"]
       },
       {
@@ -347,6 +347,7 @@ const PROJECTS = [
 const ApiBadge = ({ name }: { name: string }) => {
   const mapping: Record<string, { label: string, color: string }> = {
     Odoo: { label: "Odoo", color: "bg-[#92400E]" },
+    "Evolution API": { label: "WhatsApp", color: "bg-[#065F46]" },
     Callbell: { label: "WhatsApp", color: "bg-[#065F46]" },
     Sheets: { label: "Base de datos", color: "bg-[#1E3A5F]" },
     Email: { label: "Email", color: "bg-[#4C1D95]" },
@@ -377,12 +378,12 @@ const ApiReferenceModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =
 
   const apis = [
     {
-      name: "Callbell",
+      name: "Evolution API",
       endpoints: [
-        { method: "POST", url: "https://api.callbell.eu/v1/messages/send", desc: "Enviar mensaje" },
-        { method: "GET", url: "https://api.callbell.eu/v1/messages/status/:uuid", desc: "Estado de mensaje" },
-        { method: "GET", url: "https://api.callbell.eu/v1/contacts", desc: "Listar contactos" },
-        { method: "POST", url: "https://api.callbell.eu/v1/contacts", desc: "Crear contacto" }
+        { method: "POST", url: "https://api.evolution-api.com/v1/messages/send", desc: "Enviar mensaje" },
+        { method: "GET", url: "https://api.evolution-api.com/v1/messages/status/:uuid", desc: "Estado de mensaje" },
+        { method: "GET", url: "https://api.evolution-api.com/v1/contacts", desc: "Listar contactos" },
+        { method: "POST", url: "https://api.evolution-api.com/v1/contacts", desc: "Crear contacto" }
       ]
     },
     {
