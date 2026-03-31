@@ -34,15 +34,7 @@ const PROJECTS = [
         title: "Se crea un nuevo cliente en el sistema",
         subtitle: "El sistema detecta automáticamente cuando alguien se registra.",
         api: ["Odoo", "n8n"],
-        details: ["Trigger: Nuevo contacto creado en Odoo", "Polling cada 10 minutos", "Modelo: crm.lead / res.partner", "Filtro: create_date >= last_check"]
-      },
-      {
-        id: "p1-2",
-        type: "action",
-        title: "Se avisa al equipo por email",
-        subtitle: "Notificación interna para que el equipo esté al tanto del nuevo contacto.",
-        api: ["Email"],
-        details: ["Acción: Enviar email de aviso al equipo", "Nodo Email de n8n", "Destinatario: email del equipo configurado"]
+        details: ["Trigger: Nuevo contacto creado en Odoo", "Filtro: Casilla de producto NO es Barbacoa", "Modelo: crm.lead / res.partner", "Polling cada 10 minutos"]
       },
       {
         id: "p1-3",
@@ -125,24 +117,24 @@ const PROJECTS = [
   {
     id: "02",
     title: "Valoración",
-    description: "Cuando el equipo marca que un trabajo está terminado, el sistema pide automáticamente una reseña al cliente por WhatsApp.",
-    apis: ["Odoo", "Callbell"],
+    description: "Cuando el equipo marca la casilla de valoración antes de finalizar un trabajo, el sistema envía automáticamente una reseña al cliente por correo (Trustpilot).",
+    apis: ["Odoo", "Email"],
     steps: [
       {
         id: "p2-1",
         type: "trigger",
-        title: "Se marca el trabajo como terminado",
-        subtitle: "El sistema detecta cuando el equipo activa la solicitud de reseña.",
+        title: "Se marca la casilla de valoración",
+        subtitle: "El sistema detecta cuando el equipo marca la casilla para filtrar quién debe recibir valoración antes de poner el estado en terminado.",
         api: ["Odoo", "n8n"],
-        details: ["Trigger: Campo 'Valoración' marcado en Odoo", "Polling cada 15 minutos", "Modelo: res.partner o crm.lead"]
+        details: ["Trigger: Casilla 'Valoración' (marcada previamente) y Estado 'Terminado'", "Polling cada 15 minutos", "Modelo: res.partner o crm.lead"]
       },
       {
         id: "p2-2",
         type: "api_call",
-        title: "Se pide una reseña por WhatsApp",
-        subtitle: "Se envía un mensaje personalizado con el enlace para valorar el servicio.",
-        api: ["Callbell"],
-        details: ["POST /v1/messages/send", "type: 'text' o 'template'", "Incluir enlace a plataforma de reseñas"]
+        title: "Se envía solicitud de Trustpilot por Correo",
+        subtitle: "Se envía un email al cliente con el enlace de Trustpilot para valorar el servicio.",
+        api: ["Email"],
+        details: ["Nodo Email en n8n", "Envío de enlace directo a Trustpilot", "Destinatario: Correo del cliente"]
       },
       {
         id: "p2-3",
@@ -171,18 +163,34 @@ const PROJECTS = [
       {
         id: "p3-2",
         type: "wait",
-        title: "El sistema espera 4 días",
-        subtitle: "Pausa programada para dejar que el cliente disfrute de su nueva instalación.",
+        title: "El sistema espera 10 días",
+        subtitle: "Pausa programada de 10 días tras la instalación para ofrecer el mantenimiento.",
         api: ["n8n"],
-        details: ["Wait node con fecha absoluta", "Cálculo: fecha_instalacion + 4 días"]
+        details: ["Wait node con fecha absoluta", "Cálculo: fecha_instalacion + 10 días"]
       },
       {
         id: "p3-3",
         type: "api_call",
-        title: "Se envía oferta de mantenimiento",
-        subtitle: "Mensaje de WhatsApp con el catálogo de packs para cuidar el césped.",
+        title: "Se envía un vídeo por WhatsApp",
+        subtitle: "Primer mensaje de la oferta de mantenimiento mostrando un vídeo promocional.",
         api: ["Callbell"],
-        details: ["POST /v1/messages/send", "type: 'image' o 'text'", "Uso de template si han pasado >24h"]
+        details: ["POST /v1/messages/send", "type: 'video'"]
+      },
+      {
+        id: "p3-3-wait",
+        type: "wait",
+        title: "Espera de 1 minuto",
+        subtitle: "Breve espera antes de enviar el archivo PDF.",
+        api: ["n8n"],
+        details: ["Wait node: 1 minuto"]
+      },
+      {
+        id: "p3-3-pdf",
+        type: "api_call",
+        title: "Se envía PDF con precios",
+        subtitle: "Mensaje de WhatsApp con el documento PDF de los precios de packs.",
+        api: ["Callbell"],
+        details: ["POST /v1/messages/send", "type: 'document'"]
       },
       {
         id: "p3-4",
@@ -197,24 +205,24 @@ const PROJECTS = [
   {
     id: "04",
     title: "BBDD Arquitectos",
-    description: "Cuando el equipo añade un arquitecto a la lista y lo marca como 'pendiente', el sistema le manda los mensajes de prospección de forma automática.",
+    description: "Cuando el equipo añade un arquitecto a la lista y lo marca como 'pendiente', el sistema le manda los mensajes de prospección según su tipo de cliente desde un Excel de Drive.",
     apis: ["Sheets", "Callbell"],
     steps: [
       {
         id: "p4-1",
         type: "trigger",
         title: "Se detecta un nuevo arquitecto pendiente",
-        subtitle: "El sistema revisa la lista y busca contactos marcados para iniciar contacto.",
+        subtitle: "El sistema revisa el Excel en Drive para iniciar el contacto dependiendo del tipo de cliente.",
         api: ["Sheets", "n8n"],
-        details: ["Trigger: Estado = 'pendiente' en Google Sheets", "Polling cada 15 minutos", "GET /v4/spreadsheets/{id}/values/Sheet1"]
+        details: ["Trigger: Estado = 'pendiente' en Excel Drive", "Identifica 'tipo de cliente' (10 posibles)"]
       },
       {
         id: "p4-2",
         type: "api_call",
-        title: "Se envía el primer mensaje de contacto",
-        subtitle: "Presentación automática enviada por WhatsApp.",
+        title: "Se envía el primer mensaje personalizado",
+        subtitle: "Presentación por WhatsApp eligiendo uno de los 10 mensajes posibles según el tipo de cliente.",
         api: ["Callbell"],
-        details: ["POST /v1/messages/send", "content.text: valor de columna 'Mensaje'"]
+        details: ["POST /v1/messages/send", "content.text: mensaje asociado al 'tipo de cliente' en Excel"]
       },
       {
         id: "p4-3",
@@ -277,10 +285,10 @@ const PROJECTS = [
       {
         id: "p5-2",
         type: "decision",
-        title: "¿Qué producto se compró?",
-        subtitle: "El sistema detecta el producto comprado y consulta en Google Sheets cuál es el complemento ideal configurado.",
-        api: ["n8n", "Sheets"],
-        details: ["Identificación del producto en n8n", "Consulta a Google Sheets (Tabla de Recomendaciones)", "Mapeo dinámico: Producto A -> Complemento B"]
+        title: "¿Qué producto se compró y qué dice en Observaciones?",
+        subtitle: "El asistente revisa la casilla de observaciones de Odoo para identificar el Producto comprado y elegir el Producto recomendado 1 o Recomendado 2.",
+        api: ["n8n", "Odoo"],
+        details: ["Extraer datos de casilla de observaciones en Odoo", "Identificar: Producto comprado | Producto recomendado 1 | Producto recomendado 2"]
       },
       {
         id: "p5-3",
@@ -302,72 +310,33 @@ const PROJECTS = [
   },
   {
     id: "06",
-    title: "Lead Scoring Barbacoa",
-    description: "El sistema contacta a los interesados en barbacoas, evalúa si son clientes potenciales y les guía paso a paso para personalizar su barbacoa por WhatsApp.",
-    apis: ["Odoo", "Callbell", "IA"],
+    title: "MVP Asistente WhatsApp (Barbacoa)",
+    description: "Producto Mínimo Viable (MVP) de un asistente por WhatsApp para barbacoas. Pendiente de definición final por parte del cliente sobre preguntas de cualificación.",
+    apis: ["Callbell", "IA"],
     steps: [
       {
         id: "p6-1",
         type: "trigger",
         title: "Llega un interesado en barbacoas",
-        subtitle: "El sistema identifica nuevos leads interesados específicamente en este producto.",
-        api: ["Odoo", "n8n"],
-        details: ["Trigger: Nuevo lead de barbacoa en Odoo", "Filtro por tag_ids que incluya 'barbacoa'"]
+        subtitle: "El asistente recibe el mensaje del cliente interesado a través de WhatsApp.",
+        api: ["Callbell", "n8n"],
+        details: ["Webhook de entrada de Callbell (WhatsApp)"]
       },
       {
         id: "p6-2",
         type: "ai",
-        title: "El asistente atiende y evalúa al cliente",
-        subtitle: "Resuelve dudas frecuentes, envía el catálogo y realiza preguntas para calificar el interés del cliente.",
-        api: ["Callbell", "IA", "Odoo"],
-        details: [
-          "POST /v1/messages/send: Envío de catálogo y FAQs",
-          "FASE 1: Lead Scoring & Triaje",
-          "Preguntas: presupuesto, tipo instalación, urgencia",
-          "Puntuación en x_lead_score de Odoo"
-        ]
+        title: "Asistente responde con información base",
+        subtitle: "El agente conversa usando un contexto y documentación base inicial que nos pasan (MVP).",
+        api: ["IA", "Callbell"],
+        details: ["Integración LLM / Asistente MVP", "En espera de analizar comportamiento de chat para definir preguntas de cualificación definitivas"]
       },
       {
-        id: "p6-4",
-        type: "decision",
-        title: "¿Es un cliente potencial cualificado?",
-        subtitle: "El sistema analiza las respuestas para decidir si pasar al siguiente nivel.",
+        id: "p6-3",
+        type: "wait",
+        title: "En espera de definición del cliente",
+        subtitle: "Analizando comportamiento para agregar el flujo de cualificación definitivo más adelante.",
         api: ["n8n"],
-        details: ["Decisión: ¿Lead cualificado? (score >= umbral)", "Umbral configurable (ej: score >= 6)"]
-      },
-      {
-        id: "p6-4-no",
-        type: "branch_no",
-        branchLabel: "NO — Score bajo",
-        title: "Se avisa al equipo para atención personal",
-        subtitle: "El cliente requiere un trato manual por parte de un comercial.",
-        api: ["Odoo"],
-        details: ["Acción: Notificar al equipo para seguimiento manual", "Actualizar etapa: 'No cualificado'"]
-      },
-      {
-        id: "p6-4-yes",
-        type: "branch_yes",
-        branchLabel: "SÍ — Lead cualificado",
-        title: "El asistente guía la personalización",
-        subtitle: "Preguntas paso a paso para configurar la barbacoa ideal por WhatsApp.",
-        api: ["Callbell", "Odoo"],
-        details: ["FASE 2: Personalizador — Preguntas CERRADAS", "REGLA: si respuesta no es válida → repreguntar"]
-      },
-      {
-        id: "p6-5",
-        type: "action",
-        title: "Se guarda la configuración elegida",
-        subtitle: "Todas las opciones seleccionadas por el cliente quedan registradas.",
-        api: ["Odoo"],
-        details: ["Acción: Guardar configuración completa en Odoo", "method: create en mail.message"]
-      },
-      {
-        id: "p6-6",
-        type: "api_call",
-        title: "Se envía resumen de la barbacoa",
-        subtitle: "El cliente recibe por WhatsApp el detalle de su configuración personalizada.",
-        api: ["Callbell"],
-        details: ["POST /v1/messages/send", "Resumen de opciones elegidas"]
+        details: ["Fase del proyecto: MVP y aprendizaje", "Próxima fase a definir por el cliente"]
       }
     ]
   }
