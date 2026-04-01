@@ -25,7 +25,7 @@ const PROJECTS = [
   {
     id: "01",
     title: "Nuevo Lead",
-    description: "Cuando llega un nuevo cliente, el sistema le da la bienvenida automáticamente, le pide las fotos necesarias y hace seguimiento inteligente si no responde.",
+    description: "Cuando llega un nuevo cliente, se le da la bienvenida (falta definir mensajes y archivos exactos), pide fotos y hace seguimiento inteligente de los estados.",
     apis: ["Odoo", "n8n", "Evolution API", "Email"],
     steps: [
       {
@@ -117,32 +117,32 @@ const PROJECTS = [
   {
     id: "02",
     title: "Valoración",
-    description: "Cuando el equipo marca la casilla de valoración antes de finalizar un trabajo, el sistema envía automáticamente una reseña al cliente por correo (Trustpilot).",
-    apis: ["Odoo", "Email"],
+    description: "Cuando un cliente pasa a 'Cliente terminado' y tiene marcada la casilla de valoración, se le envía un WhatsApp (para Google) y un email de gracias (con copia a Trustpilot).",
+    apis: ["Odoo", "Evolution API", "Email"],
     steps: [
       {
         id: "p2-1",
         type: "trigger",
-        title: "Se marca la casilla de valoración",
-        subtitle: "El sistema detecta cuando el equipo marca la casilla para filtrar quién debe recibir valoración antes de poner el estado en terminado.",
+        title: "Cliente en estado Terminado con valoración",
+        subtitle: "El sistema detecta cuando un cliente pasa al estado 'Cliente terminado' (o similar en Odoo) y tiene marcada la casilla de valoración.",
         api: ["Odoo", "n8n"],
-        details: ["Trigger: Casilla 'Valoración' (marcada previamente) y Estado 'Terminado'", "Polling cada 15 minutos", "Modelo: res.partner o crm.lead"]
+        details: ["Trigger: Estado = 'Cliente terminado'", "Condición: Casilla 'Valoración' marcada", "Polling cada 15 minutos en n8n"]
       },
       {
         id: "p2-2",
         type: "api_call",
-        title: "Se envía solicitud de Trustpilot por Correo",
-        subtitle: "Se envía un email al cliente con el enlace de Trustpilot para valorar el servicio.",
-        api: ["Email"],
-        details: ["Nodo Email en n8n", "Envío de enlace directo a Trustpilot", "Destinatario: Correo del cliente"]
+        title: "Se envía la reseña de Google por WhatsApp",
+        subtitle: "Se envía un mensaje de WhatsApp automatizado con el enlace directo para dejar valoración en Google.",
+        api: ["Evolution API"],
+        details: ["POST /v1/messages/send", "Enlace: Reseñas de Empresa en Google"]
       },
       {
         id: "p2-3",
-        type: "action",
-        title: "Se marca como enviado",
-        subtitle: "El sistema registra que ya se pidió la valoración para no repetirla.",
-        api: ["Odoo"],
-        details: ["Acción: Marcar como enviado en Odoo", "method: write", "x_valoracion_wa_enviado = True"]
+        type: "api_call",
+        title: "Se envía email de agradecimiento en copia a Trustpilot",
+        subtitle: "Se manda un correo de Gmail al cliente agradeciendo su confianza, poniendo en copia el correo automatizado de Trustpilot para que la herramienta haga el resto.",
+        api: ["Email"],
+        details: ["Destinatario: Correo del cliente", "Copia (CC/BCC): Correo interno de Trustpilot", "Módulo Email o Nodo Gmail"]
       }
     ]
   },
@@ -155,10 +155,10 @@ const PROJECTS = [
       {
         id: "p3-1",
         type: "trigger",
-        title: "Se detecta una nueva instalación finalizada",
-        subtitle: "El sistema identifica clientes de césped que ya tienen su producto instalado.",
+        title: "Se detecta un Cliente Terminado con césped",
+        subtitle: "El sistema verifica que el cliente haya pasado a 'Cliente terminado' y busca en su ficha si ha instalado césped.",
         api: ["Odoo", "n8n"],
-        details: ["Trigger: Cliente de césped marcado como instalado", "Polling cada hora", "Filtro por tag/categoría: 'cesped'"]
+        details: ["Trigger: Cliente en estado 'Cliente terminado'", "Verificación: Ha instalado un producto categorizado como césped artificial"]
       },
       {
         id: "p3-2",
@@ -219,84 +219,84 @@ const PROJECTS = [
       {
         id: "p4-2",
         type: "api_call",
-        title: "Se envía el primer mensaje personalizado",
-        subtitle: "Presentación por WhatsApp eligiendo uno de los 10 mensajes posibles según el tipo de cliente.",
+        title: "Se envía el primer mensaje predefinido",
+        subtitle: "Presentación eligiendo el 'Mensaje N' correspondiente de la tabla de 10 posibles mensajes/respuestas.",
         api: ["Evolution API"],
-        details: ["POST /v1/messages/send", "content.text: mensaje asociado al 'tipo de cliente' en Excel"]
+        details: ["POST /v1/messages/send", "Dato: Columna extraída de Excel ('Mensaje 1/2...10') en función del rol"]
       },
       {
         id: "p4-3",
         type: "action",
-        title: "Se marca la fecha de contacto",
-        subtitle: "El sistema anota cuándo se envió el primer mensaje.",
+        title: "Se anota que se envió el mensaje",
+        subtitle: "El sistema registra que ya contactamos y anota el tiempo actual.",
         api: ["Sheets"],
-        details: ["Acción: Actualizar WA_enviado_1 = timestamp en Sheets", "PUT /v4/spreadsheets/{id}/values/{range}"]
+        details: ["Acción: Actualizar timestamp de envío en Sheets", "PUT /v4/spreadsheets/{id}/values/{range}"]
       },
       {
         id: "p4-4",
         type: "wait",
         title: "El sistema espera 2 días",
-        subtitle: "Pausa para ver si el arquitecto responde al primer contacto.",
+        subtitle: "Pausa para dar margen al contacto para contestar.",
         api: ["n8n", "Evolution API"],
-        details: ["Wait node: 2 días sin respuesta", "Polling compara timestamp de WA_enviado_1"]
+        details: ["Wait node: Espera de 48 horas sin recibir evento de respuesta"]
       },
       {
         id: "p4-5",
         type: "decision",
-        title: "¿Ha respondido el arquitecto?",
-        subtitle: "Comprobación automática de mensajes entrantes.",
+        title: "¿Ha contestado al mensaje inicial?",
+        subtitle: "Comprobación automática de mensajes con el lead.",
         api: ["Evolution API"],
-        details: ["Decisión: ¿Ha contestado el arquitecto?", "Webhook message_created de Evolution API"]
+        details: ["Si el cliente ha hablado a la cuenta de empresa", "Webhook de evento message_created"]
       },
       {
         id: "p4-5-yes",
         type: "branch_yes",
         branchLabel: "SÍ — Ha respondido",
-        title: "Se marca como interesado",
-        subtitle: "El sistema detiene la secuencia automática al recibir respuesta.",
+        title: "Se detiene la secuencia",
+        subtitle: "El sistema retira al contacto porque un vendedor pasará a atenderlo de forma manual.",
         api: ["Sheets"],
-        details: ["Acción: Actualizar estado = 'contestado' en Sheets", "PUT estado = 'contestado'"]
+        details: ["Actualiza estado a 'contactado' en Sheets y fin de flujo"]
       },
       {
         id: "p4-5-no",
         type: "branch_no",
-        branchLabel: "NO — Sin respuesta tras 2 días",
-        title: "Se envía el segundo mensaje de seguimiento",
-        subtitle: "Recordatorio automático para retomar el contacto.",
+        branchLabel: "NO — Sin respuesta (48h)",
+        title: "Se envía la Respuesta automatizada",
+        subtitle: "Se selecciona la columna 'Respuesta N' que vaya emparejada con su 'Mensaje N' inicial.",
         api: ["Evolution API", "Sheets"],
-        details: ["POST /v1/messages/send → Mensaje 2", "content.text: columna 'Mensaje 2'"]
+        details: ["Dato: Columna 'Respuesta 1/2...10' asociada", "POST /v1/messages/send hacia el lead"]
       }
     ]
   },
   {
     id: "05",
     title: "Venta Cruzada",
-    description: "Cuando un cliente compra uno de los 5 productos, recibe automáticamente un mensaje con productos complementarios adaptado a lo que compró.",
+    description: "Al catalogar un cliente como Venta Cruzada, la automatización busca en un Excel qué recomendar (Opción 1 o 2) dependiendo del producto comprado y las notas manuales de un agente.",
     apis: ["Odoo", "Evolution API", "Sheets"],
     steps: [
       {
         id: "p5-1",
         type: "trigger",
-        title: "Se detecta una compra finalizada",
-        subtitle: "El sistema identifica pedidos instalados listos para venta cruzada.",
+        title: "Marcamos al cliente como Venta Cruzada",
+        subtitle: "El sistema se dispara cuando explícitamente se pone o etiqueta a un cliente para Venta Cruzada en Odoo.",
         api: ["Odoo", "n8n"],
-        details: ["Trigger: Pedido completado/instalado en Odoo", "Modelo: sale.order", "Leer líneas: sale.order.line"]
+        details: ["Trigger: Cambio de estado/etiqueta a 'Venta Cruzada'", "Lectura del campo del producto original comprado"]
       },
       {
         id: "p5-2",
         type: "decision",
-        title: "¿Qué producto se compró y qué dice en Observaciones?",
-        subtitle: "El asistente revisa la casilla de observaciones de Odoo para identificar el Producto comprado y elegir el Producto recomendado 1 o Recomendado 2.",
-        api: ["n8n", "Odoo"],
-        details: ["Extraer datos de casilla de observaciones en Odoo", "Identificar: Producto comprado | Producto recomendado 1 | Producto recomendado 2"]
+        title: "¿Qué recomendación inteligente se aplica?",
+        subtitle: "Mira en Excel: Producto Comprado -> Recomendado 1. Si en la casilla manual 'Observaciones' de Odoo han indicado que NO corresponde el Recomendado 1, pasa al Recomendado 2.",
+        api: ["n8n", "Sheets", "Odoo"],
+        details: ["Lookup en Excel por columnas: Comprado | Rec 1 | Rec 2", "Regla Inteligente analizando texto de sugerencias manuales del vendedor"]
       },
       {
         id: "p5-3",
         type: "api_call",
-        title: "Se envía recomendación por WhatsApp",
-        subtitle: "Mensaje personalizado con el producto que mejor combina con su compra.",
+        title: "Se envía la recomendación por WhatsApp",
+        subtitle: "Se envía el mensaje con el producto Recomendado final adaptado al escenario.",
         api: ["Evolution API"],
-        details: ["POST /v1/messages/send", "Contenido dinámico según el producto detectado"]
+        details: ["Mensaje de Evolution API con la oferta validada"]
       },
       {
         id: "p5-4",
