@@ -117,8 +117,8 @@ const PROJECTS = [
   {
     id: "02",
     title: "Valoración",
-    description: "Cuando un cliente pasa a 'Cliente terminado' y tiene marcada la casilla de valoración, se le envía un WhatsApp (para Google) y un email de gracias (con copia a Trustpilot).",
-    apis: ["Odoo", "Evolution API", "Email"],
+    description: "Cuando un cliente pasa a 'Cliente terminado' y tiene marcada la casilla de valoración, se le envía un WhatsApp (para Google).",
+    apis: ["Odoo", "Evolution API"],
     steps: [
       {
         id: "p2-1",
@@ -135,14 +135,6 @@ const PROJECTS = [
         subtitle: "Se envía un mensaje de WhatsApp automatizado con el enlace directo para dejar valoración en Google.",
         api: ["Evolution API"],
         details: ["POST /v1/messages/send", "Enlace: Reseñas de Empresa en Google"]
-      },
-      {
-        id: "p2-3",
-        type: "api_call",
-        title: "Se envía email de agradecimiento en copia a Trustpilot",
-        subtitle: "Se manda un correo de Gmail al cliente agradeciendo su confianza, poniendo en copia el correo automatizado de Trustpilot para que la herramienta haga el resto.",
-        api: ["Email"],
-        details: ["Destinatario: Correo del cliente", "Copia (CC/BCC): Correo interno de Trustpilot", "Módulo Email o Nodo Gmail"]
       }
     ]
   },
@@ -337,6 +329,30 @@ const PROJECTS = [
         subtitle: "Analizando comportamiento para agregar el flujo de cualificación definitivo más adelante.",
         api: ["n8n"],
         details: ["Fase del proyecto: MVP y aprendizaje", "Próxima fase a definir por el cliente"]
+      }
+    ]
+  },
+  {
+    id: "07",
+    title: "Registro de leads desde meta",
+    description: "Cada vez que un nuevo lead de Meta se añade a Google Sheets, se sube automáticamente a Odoo como nuevo lead.",
+    apis: ["Sheets", "Odoo"],
+    steps: [
+      {
+        id: "p7-1",
+        type: "trigger",
+        title: "Nuevo registro en Google Sheets",
+        subtitle: "El sistema detecta cuando se añade una nueva fila en Google Sheets (proveniente de Meta).",
+        api: ["Sheets", "n8n"],
+        details: ["Trigger: On Row Added en Sheets", "Polling configurado para leer las nuevas filas añadidas"]
+      },
+      {
+        id: "p7-2",
+        type: "action",
+        title: "Creación de lead en Odoo",
+        subtitle: "Sube directamente el nuevo lead al CRM mapeando la información de la fila.",
+        api: ["Odoo"],
+        details: ["POST crear crm.lead", "Mapeo de campos: nombre, teléfono, email, etc."]
       }
     ]
   }
