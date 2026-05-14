@@ -303,32 +303,86 @@ const PROJECTS = [
   {
     id: "06",
     title: "MVP Asistente WhatsApp (Barbacoa)",
-    description: "Producto Mínimo Viable (MVP) de un asistente por WhatsApp para barbacoas. Pendiente de definición final por parte del cliente sobre preguntas de cualificación.",
-    apis: ["Evolution API", "IA"],
+    description: "Asistente de IA conversacional para gestionar leads de barbacoas vía WhatsApp. Flujo completo en n8n con filtro estricto en Odoo, Evolution API, AI Agent con GPT-4o, y sistema de follow-up inteligente.",
+    apis: ["Odoo", "Evolution API", "IA", "Gmail", "Google Docs"],
     steps: [
       {
         id: "p6-1",
         type: "trigger",
-        title: "Llega un interesado en barbacoas",
-        subtitle: "El asistente recibe el mensaje del cliente interesado a través de WhatsApp. Se consulta la casilla en Odoo que refleja exactamente en qué está interesado el lead para mayor contexto.",
-        api: ["Evolution API", "n8n"],
-        details: ["Webhook de entrada de Evolution API (WhatsApp)", "Contexto: Casilla de Odoo con el producto/interés específico"]
+        title: "Webhook Odoo - Nuevo Lead entrante",
+        subtitle: "Recibe el payload cuando se crea un lead en Odoo. Solo continúa si es 'Nuevo Lead' Y tiene etiqueta 'barbacoa'. Cualquier otro lead se detiene automáticamente.",
+        api: ["Odoo", "n8n"],
+        details: ["Webhook POST desde Odoo", "Filtro IF: stage_id.name == 'Nuevo Lead'", "Filtro IF: tag_ids contiene 'barbacoa'", "False → NoOp (detener sin afectar otros flujos)"]
       },
       {
         id: "p6-2",
-        type: "ai",
-        title: "Asistente responde con información base",
-        subtitle: "El agente conversa usando un contexto y documentación base inicial que nos pasan (MVP).",
-        api: ["IA", "Evolution API"],
-        details: ["Integración LLM / Asistente MVP", "En espera de analizar comportamiento de chat para definir preguntas de cualificación definitivas"]
+        type: "action",
+        title: "Obtener datos e inicializar sesión",
+        subtitle: "Extrae id, contact_name, phone, email del lead desde Odoo e inicializa variables de sesión: lead_id, phone, stage='inicio', followup_count=0.",
+        api: ["Odoo", "n8n"],
+        details: ["HTTP Request a Odoo XML-RPC / JSON-RPC", "Set node: lead_id, phone, stage, followup_count"]
       },
       {
         id: "p6-3",
+        type: "api_call",
+        title: "Enviar catálogo y registrar primer contacto",
+        subtitle: "Envía foto del catálogo + saludo personalizado vía Evolution API y registra nota interna en Odoo (message_post).",
+        api: ["Evolution API", "Odoo"],
+        details: ["POST /message/sendMedia → imagen + caption personalizado", "message_post en Odoo: 'Primer contacto enviado vía WhatsApp. Catálogo enviado.'"]
+      },
+      {
+        id: "p6-4",
         type: "wait",
-        title: "En espera de definición del cliente",
-        subtitle: "Analizando comportamiento para agregar el flujo de cualificación definitivo más adelante.",
-        api: ["n8n"],
-        details: ["Fase del proyecto: MVP y aprendizaje", "Próxima fase a definir por el cliente"]
+        title: "Esperar respuesta 24h (resume on webhook)",
+        subtitle: "Wait node que pausa el flujo. Si el cliente responde antes de 24h, va al Asistente IA. Si expira, va al sistema de Follow-up.",
+        api: ["n8n", "Evolution API"],
+        details: ["Wait: Resume on Webhook", "Timeout: 24 horas", "Response recibida → AI Agent", "Timeout → Bloque Follow-up"]
+      },
+      {
+        id: "p6-5",
+        type: "ai",
+        title: "AI Agent - Asistente Conversacional (GPT-4o)",
+        subtitle: "Agente con OpenAI GPT-4o, Window Buffer Memory y 3 tools: ObtenerInfoModelos (Google Docs), RegistrarNotaOdoo (Chatter), EvaluarPresupuesto.",
+        api: ["IA", "n8n", "Google Docs"],
+        details: [
+          "Model: OpenAI GPT-4o",
+          "Memory: Window Buffer (Session ID = phone, 10 turnos)",
+          "Tool 1: ObtenerInfoModelos → Google Docs (modelos de barbacoa)",
+          "Tool 2: RegistrarNotaOdoo → message_post en Odoo",
+          "Tool 3: EvaluarPresupuesto → código JS de comparación",
+          "Flujo interno: SELECCIÓN_MODELO → RESOLUCIÓN_DUDAS → PERSONALIZACIÓN (test 5 preguntas) → CUALIFICACIÓN"
+        ]
+      },
+      {
+        id: "p6-6",
+        type: "decision",
+        title: "Router de salida (Switch Node)",
+        subtitle: "El AI Agent define estado_final. Switch enruta según el resultado: cualificado, descartado_precio o en_conversacion (loop).",
+        api: ["IA", "n8n"],
+        details: [
+          "CUALIFICADO → Gmail aviso comercial + Stage 'Presupuesto Pendiente' + Tag 'Personalizado'",
+          "DESCARTADO_PRECIO → Stage 'Perdido' (razón: No cualificado - Precio) + Nota interna",
+          "EN_CONVERSACION → Loop a Wait 24h para seguir conversando"
+        ]
+      },
+      {
+        id: "p6-7",
+        type: "action",
+        title: "Lead cualificado - Aviso y stage",
+        subtitle: "Email interno al equipo con resumen de personalización y actualización del lead a 'Presupuesto Pendiente' en Odoo.",
+        api: ["Gmail", "Odoo"],
+        details: ["Gmail: Asunto 'Nuevo Lead Cualificado - Barbacoa - {{nombre}}'", "Odoo: Stage 'Presupuesto Pendiente' + Tag 'Personalizado'"]
+      },
+      {
+        id: "p6-8",
+        type: "action",
+        title: "Sistema de Follow-up inteligente",
+        subtitle: "Si expiran 24h sin respuesta: intento 1 = recordatorio WhatsApp + loop 24h. Intento 2 = email a comercial + Stage 'Seguimiento Manual'.",
+        api: ["Evolution API", "Gmail", "Odoo"],
+        details: [
+          "IF followup_count == 0 → Enviar recordatorio WhatsApp + incrementar contador + loop Wait 24h",
+          "IF followup_count == 1 → Email interno a comercial + Stage 'Seguimiento Manual' en Odoo"
+        ]
       }
     ]
   },

@@ -1,0 +1,911 @@
+{
+  "name": "MVP - Asistente Barbacoa",
+  "nodes": [
+    {
+      "id": "n0-webhook-odoo",
+      "name": "Webhook Odoo",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [0, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "odoo-lead-barbacoa",
+        "responseMode": "responseNode",
+        "responseData": "",
+        "options": {}
+      },
+      "webhookId": null,
+      "credentials": {}
+    },
+    {
+      "id": "n1-filtro-barbacoa",
+      "name": "Filtro Barbacoa",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [300, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1-stage",
+              "leftValue": "={{ ($json.stage_id && $json.stage_id.name) || '' }}",
+              "rightValue": "Nuevo Lead",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c2-tag",
+              "leftValue": "={{ $json.tag_ids ? $json.tag_ids.join(',') : ($json.description || '') }}",
+              "rightValue": "barbacoa",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n2-fin-no-barbacoa",
+      "name": "Fin - No Barbacoa",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [600, 600],
+      "parameters": {}
+    },
+    {
+      "id": "n3-obtener-datos-lead",
+      "name": "Obtener Datos Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $credentials.odooApi.url }}/jsonrpc",
+        "authentication": "genericCredential",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "jsonrpc",
+              "value": "2.0"
+            },
+            {
+              "name": "method",
+              "value": "call"
+            },
+            {
+              "name": "params",
+              "value": "{{ '{\"service\":\"object\",\"method\":\"execute_kw\",\"args\":[' + $credentials.odooApi.database + ',\" + $json.uid + \",\" + $credentials.odooApi.password + \",\"crm.lead\",\"read\",[' + $json.id + '],[\"id\",\"contact_name\",\"phone\",\"email_from\",\"tag_ids\",\"stage_id\"]]}' }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        },
+        "sendQuery": false,
+        "sendHeaders": false
+      },
+      "credentials": {
+        "odooApi": {
+          "id": "__ODOO_CREDENTIAL_ID__",
+          "name": "Odoo API"
+        }
+      }
+    },
+    {
+      "id": "n4-inicializar-sesion",
+      "name": "Inicializar Sesión",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [900, 200],
+      "parameters": {
+        "mode": "define",
+        "values": {
+          "string": [
+            {
+              "name": "lead_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "phone",
+              "value": "={{ $json.phone }}"
+            },
+            {
+              "name": "stage",
+              "value": "inicio"
+            },
+            {
+              "name": "contact_name",
+              "value": "={{ $json.contact_name }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $json.email_from }}"
+            }
+          ],
+          "number": [
+            {
+              "name": "followup_count",
+              "value": 0
+            }
+          ]
+        },
+        "options": {
+          "keepExisting": true
+        }
+      }
+    },
+    {
+      "id": "n5-enviar-catalogo",
+      "name": "Enviar Catálogo WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $credentials.evolutionApi.url }}/message/sendMedia/{{ $credentials.evolutionApi.instanceName }}",
+        "authentication": "genericCredential",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $credentials.evolutionApi.apiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "application/json",
+        "rawBody": true,
+        "body": "={{\n  \"number\": $json.phone,\n  \"mediaMessage\": {\n    \"mediatype\": \"image\",\n    \"caption\": \"¡Hola \" + $json.contact_name + \"! 👋 Somos [Empresa]. Hemos recibido tu consulta sobre nuestras barbacoas 🔥. Te adjunto nuestro catálogo con los modelos disponibles. ¿En cuál de ellos estabas interesado/a?\",\n    \"media\": \"URL_DE_LA_IMAGEN_DEL_CATALOGO\"\n  }\n}}",
+        "options": {
+          "timeout": 30000
+        },
+        "sendQuery": false
+      },
+      "credentials": {
+        "evolutionApi": {
+          "id": "__EVOLUTION_CREDENTIAL_ID__",
+          "name": "Evolution API"
+        }
+      }
+    },
+    {
+      "id": "n6-registrar-nota",
+      "name": "Registrar Nota - Primer Contacto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1500, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $credentials.odooApi.url }}/jsonrpc",
+        "authentication": "genericCredential",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "rawBody": true,
+        "body": "={{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\n      $credentials.odooApi.database,\n      $json.uid || 1,\n      $credentials.odooApi.password,\n      \"crm.lead\",\n      \"message_post\",\n      [$json.lead_id || $json.id],\n      {\n        \"body\": \"<p>📤 <b>Primer contacto enviado vía Evolution API (WhatsApp)</b></p><p>Catálogo de barbacoas enviado al cliente.</p><p>Teléfono: \" + ($json.phone || '') + \"</p><p>Fecha: \" + new Date().toLocaleString() + \"</p>\"\n      }\n    ]\n  }\n} }}",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": false,
+        "sendQuery": false
+      },
+      "credentials": {
+        "odooApi": {
+          "id": "__ODOO_CREDENTIAL_ID__",
+          "name": "Odoo API"
+        }
+      }
+    },
+    {
+      "id": "n7-esperar-respuesta",
+      "name": "Esperar Respuesta 24h",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1800, 200],
+      "parameters": {
+        "resume": "webhook",
+        "limit": {
+          "mode": "afterTimeInterval",
+          "value": 24,
+          "unit": "hours"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n8-ai-agent",
+      "name": "AI Agent Conversacional",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.1,
+      "position": [2100, 200],
+      "parameters": {
+        "agentType": "openAiFunctionsAgent",
+        "options": {
+          "systemPrompt": "Eres un asistente experto en ventas de barbacoas por WhatsApp. Tu objetivo es guiar al cliente por los siguientes estados según la conversación:\n\n1. SELECCIÓN DE MODELO: El cliente dirá qué modelo le gusta. Usa la herramienta 'ObtenerInfoModelos' para explicarle el modelo en 2 párrafos atractivos con emojis. Termina preguntando: '¿Tienes alguna duda sobre este modelo o prefieres personalizarla para darte un presupuesto exacto?'\n\n2. RESOLUCIÓN DE DUDAS: Si el cliente tiene dudas, responde usando la info de la base de conocimiento. Vuelve a invitarlo a personalizar.\n\n3. PERSONALIZACIÓN (TIPO TEST): Si quiere personalizar, hazle ESTAS preguntas de una en una (espera su respuesta antes de pasar a la siguiente):\n   - P1: Tamaño (Pequeña, Mediana, Grande).\n   - P2: Material (Inox, Fundición, Recomendación).\n   - P3: Uso (Jardín, Camping, Ambos).\n   - P4: Extras (Tapa, Ruedas, Parrilla, Ninguno).\n   - P5 (CLAVE): Presupuesto aproximado (<300€, 300-600€, 600-1000€, >1000€).\n\n4. CUALIFICACIÓN POR PRECIO: Cuando responda el presupuesto, usa la herramienta 'EvaluarPresupuesto' para comparar. \n   - Si cuadra: Responde que todo está perfecto y establece estado_final = 'cualificado'.\n   - Si no cuadra pero hay uno más barato: Ofrece el modelo económico y establece estado_final = 'en_conversacion'.\n   - Si no hay modelo para su presupuesto: Despídete amablemente y establece estado_final = 'descartado_precio'.\n\nCRÍTICO: Al final de CADA interacción, debes establecer la variable estado_final en tu respuesta. La variable estado_final debe ser uno de estos valores exactos: 'cualificado', 'descartado_precio', o 'en_conversacion'.\n\nUsa la herramienta 'RegistrarNotaOdoo' para registrar resúmenes importantes en el CRM.",
+          "maxIterations": 10
+        },
+        "promptType": "define"
+      }
+    },
+    {
+      "id": "n9-openai-model",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [1950, 0],
+      "parameters": {
+        "model": "gpt-4o",
+        "temperature": 0.7,
+        "maxTokens": 1000
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__OPENAI_CREDENTIAL_ID__",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "id": "n10-window-buffer-memory",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryWindowBuffer",
+      "typeVersion": 1,
+      "position": [1950, 400],
+      "parameters": {
+        "sessionKey": "={{ $json.phone || $json.contact_name }}",
+        "contextWindowLength": 10
+      }
+    },
+    {
+      "id": "n11-tool-obtener-modelos",
+      "name": "Tool - ObtenerInfoModelos",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1,
+      "position": [1600, 600],
+      "parameters": {
+        "name": "obtenerInfoModelos",
+        "description": "Obtiene información detallada de modelos de barbacoa disponibles desde la base de conocimiento. Úsala cuando el cliente pregunte por un modelo específico o quiera conocer las opciones disponibles.",
+        "code": "// Tool: ObtenerInfoModelos\n// Esta tool hace una consulta HTTP a Google Docs API para obtener info de modelos\n// En producción, reemplazar con llamada real a Google Docs API\n\nconst modelInfo = {\n  'Clásica': {\n    name: 'Barbacoa Clásica',\n    price: 299,\n    material: 'Acero inoxidable',\n    size: 'Pequeña (60cm)',\n    description: 'Perfecta para terrazas y balcones. Ligera y fácil de transportar.',\n    image: 'URL_IMAGEN_CLASICA',\n    extras: ['Parrilla']\n  },\n  'Premium': {\n    name: 'Barbacoa Premium',\n    price: 599,\n    material: 'Hierro fundido',\n    size: 'Mediana (90cm)',\n    description: 'Ideal para jardines y reuniones familiares. Retención de calor excepcional.',\n    image: 'URL_IMAGEN_PREMIUM',\n    extras: ['Tapa', 'Parrilla', 'Ruedas']\n  },\n  'Pro': {\n    name: 'Barbacoa Pro',\n    price: 999,\n    material: 'Acero inoxidable + Fundición',\n    size: 'Grande (120cm)',\n    description: 'Para expertos barbacoeros y grandes eventos. Doble cámara de cocción.',\n    image: 'URL_IMAGEN_PRO',\n    extras: ['Tapa', 'Ruedas', 'Parrilla', 'Termómetro']\n  },\n  'Deluxe': {\n    name: 'Barbacoa Deluxe',\n    price: 1499,\n    material: 'Acero inoxidable premium',\n    size: 'Extra Grande (150cm)',\n    description: 'La experiencia definitiva en barbacoas. Con mesas laterales y gancho para utensilios.',\n    image: 'URL_IMAGEN_DELUXE',\n    extras: ['Tapa', 'Ruedas', 'Parrilla', 'Termómetro', 'Gancho']\n  }\n};\n\nconst modeloBuscado = ($params.modelo || '').toLowerCase().trim();\n\nif (!modeloBuscado) {\n  // Si no especifica modelo, listar todos\n  const lista = Object.values(modelInfo).map(m => \n    `• ${m.name} - ${m.price}€ (${m.size})`\n  ).join('\\n');\n  return JSON.stringify({\n    disponibles: Object.keys(modelInfo),\n    mensaje: `Estos son nuestros modelos disponibles:\\n${lista}\\n\\n¿Te gustaría saber más sobre alguno en particular?`\n  });\n}\n\n// Buscar coincidencia\nconst matchKey = Object.keys(modelInfo).find(k => \n  k.toLowerCase().includes(modeloBuscado) || \n  modelInfo[k].name.toLowerCase().includes(modeloBuscado)\n);\n\nif (matchKey) {\n  const m = modelInfo[matchKey];\n  return JSON.stringify({\n    modelo: m.name,\n    precio: m.price,\n    material: m.material,\n    tamaño: m.size,\n    descripción: m.description,\n    extras: m.extras,\n    mensaje: `🔥 *${m.name}*\\n\\n💰 Precio: *${m.price}€*\\n📏 Tamaño: *${m.size}*\\n🔧 Material: *${m.material}*\\n📝 ${m.description}\\n✨ Extras incluidos: ${m.extras.join(', ')}\\n\\n¿Te gusta este modelo? ¿Quieres que te ayude a personalizarlo para un presupuesto exacto?`\n  });\n} else {\n  const lista = Object.keys(modelInfo).join(', ');\n  return JSON.stringify({\n    error: `Modelo \"${$params.modelo}\" no encontrado`,\n    disponibles: Object.keys(modelInfo),\n    mensaje: `Lo siento, no tengo información sobre \"${$params.modelo}\". Los modelos disponibles son: ${lista}. ¿Te gustaría conocer alguno de ellos?`\n  });\n}",
+        "parameters": "{\"type\":\"object\",\"properties\":{\"modelo\":{\"type\":\"string\",\"description\":\"Nombre del modelo de barbacoa que el cliente quiere consultar (opcional: si no se especifica, lista todos los modelos disponibles)\"}},\"required\":[]}"
+      }
+    },
+    {
+      "id": "n12-tool-registrar-nota",
+      "name": "Tool - RegistrarNotaOdoo",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1,
+      "position": [1950, 600],
+      "parameters": {
+        "name": "registrarNotaOdoo",
+        "description": "Registra una nota o resumen en el lead de Odoo (Chatter / message_post). Úsala para guardar información importante de la conversación, resúmenes de personalización, o decisiones del cliente.",
+        "code": "// Tool: RegistrarNotaOdoo\n// Registra una nota interna en el lead de Odoo\n\nconst axios = require('axios');\n\nconst odooUrl = $credentials.odooApi.url;\nconst db = $credentials.odooApi.database;\nconst uid = $json.uid || 1;\nconst password = $credentials.odooApi.password;\nconst leadId = $json.lead_id || $json.id;\nconst texto = $params.texto || 'Sin contenido';\n\nconst body = {\n  jsonrpc: '2.0',\n  method: 'call',\n  params: {\n    service: 'object',\n    method: 'execute_kw',\n    args: [\n      db,\n      uid,\n      password,\n      'crm.lead',\n      'message_post',\n      [leadId],\n      {\n        body: `<p>🤖 <b>Asistente Barbacoa</b></p><p>${texto.replace(/\\n/g, '<br>')}</p><p><small>${new Date().toISOString()}</small></p>`,\n        subtype_xmlid: 'mail.mt_note'\n      }\n    ]\n  }\n};\n\n// En la tool de código, el return es el output que ve el LLM\nreturn JSON.stringify({ success: true, message: 'Nota registrada correctamente en Odoo' });",
+        "parameters": "{\"type\":\"object\",\"properties\":{\"texto\":{\"type\":\"string\",\"description\":\"Texto de la nota a registrar en el lead de Odoo. Incluye el resumen de la conversación, decisiones del cliente o info relevante.\"}},\"required\":[\"texto\"]}"
+      }
+    },
+    {
+      "id": "n13-tool-evaluar-presupuesto",
+      "name": "Tool - EvaluarPresupuesto",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1,
+      "position": [2300, 600],
+      "parameters": {
+        "name": "evaluarPresupuesto",
+        "description": "Evalúa si el presupuesto del cliente es compatible con el modelo seleccionado y recomienda alternativas si no hay match. CRÍTICO: Úsala cuando el cliente indique su presupuesto en la fase de personalización.",
+        "code": "// Tool: EvaluarPresupuesto\n// Compara el presupuesto del cliente con los precios de los modelos\n\nconst modelos = [\n  { name: 'Barbacoa Clásica', price: 299, segment: '<300€' },\n  { name: 'Barbacoa Premium', price: 599, segment: '300-600€' },\n  { name: 'Barbacoa Pro', price: 999, segment: '600-1000€' },\n  { name: 'Barbacoa Deluxe', price: 1499, segment: '>1000€' }\n];\n\nconst modeloSeleccionado = ($params.modelo || '').toLowerCase();\nconst presupuestoCliente = parseFloat($params.presupuesto) || 0;\n\n// Buscar el modelo\nconst match = modelos.find(m => m.name.toLowerCase().includes(modeloSeleccionado) || modeloSeleccionado.includes(m.name.toLowerCase()));\n\nif (!match && modeloSeleccionado) {\n  return JSON.stringify({\n    error: `Modelo \"${$params.modelo}\" no reconocido`,\n    disponibles: modelos.map(m => m.name),\n    recomendacion: 'Por favor, especifica un modelo de la lista.'\n  });\n}\n\nif (!match) {\n  // Si no hay modelo específico, evaluar presupuesto general\n  const asequibles = modelos.filter(m => m.price <= presupuestoCliente);\n  if (asequibles.length > 0) {\n    const mejor = asequibles[asequibles.length - 1];\n    return JSON.stringify({\n      compatible: true,\n      modelo_recomendado: mejor.name,\n      precio: mejor.price,\n      resultado: 'compatible',\n      mensaje: `Con un presupuesto de ${presupuestoCliente}€, te recomiendo la *${mejor.name}* por ${mejor.price}€. ¡Se ajusta perfectamente a tu presupuesto!`\n    });\n  } else {\n    const masBarato = modelos[0];\n    return JSON.stringify({\n      compatible: false,\n      modelo_recomendado: masBarato.name,\n      precio_minimo: masBarato.price,\n      resultado: 'descartado_precio',\n      mensaje: `Con ${presupuestoCliente}€, nuestro modelo más económico es la *${masBarato.name}* por ${masBarato.price}€. ¿Te interesaría?`\n    });\n  }\n}\n\n// Hay match específico\nif (presupuestoCliente >= match.price) {\n  return JSON.stringify({\n    compatible: true,\n    modelo: match.name,\n    precio: match.price,\n    presupuesto_cliente: presupuestoCliente,\n    resultado: 'cualificado',\n    mensaje: `El presupuesto de ${presupuestoCliente}€ es suficiente para la *${match.name}* (${match.price}€). ¡Perfecto!`\n  });\n} else {\n  // Buscar alternativas más baratas\n  const alternativas = modelos.filter(m => m.price <= presupuestoCliente);\n  if (alternativas.length > 0) {\n    const mejorAlt = alternativas[alternativas.length - 1];\n    return JSON.stringify({\n      compatible: false,\n      modelo_solicitado: match.name,\n      precio_modelo: match.price,\n      alternativa: mejorAlt.name,\n      precio_alternativa: mejorAlt.price,\n      resultado: 'en_conversacion',\n      mensaje: `La *${match.name}* cuesta ${match.price}€, pero con ${presupuestoCliente}€ te recomiendo la *${mejorAlt.name}* por ${mejorAlt.price}€. ¿Te interesa?`\n    });\n  } else {\n    return JSON.stringify({\n      compatible: false,\n      modelo_solicitado: match.name,\n      precio_modelo: match.price,\n      precio_minimo: modelos[0].price,\n      resultado: 'descartado_precio',\n      mensaje: `Nuestro modelo más económico es la *${modelos[0].name}* por ${modelos[0].price}€. Con ${presupuestoCliente}€ no tenemos opciones disponibles. ¿Quieres reconsiderar tu presupuesto?`\n    });\n  }\n}",
+        "parameters": "{\"type\":\"object\",\"properties\":{\"modelo\":{\"type\":\"string\",\"description\":\"Nombre del modelo de barbacoa que el cliente ha seleccionado o por el que muestra interés\"},\"presupuesto\":{\"type\":\"number\",\"description\":\"Presupuesto aproximado del cliente en euros (€). Ejemplo: 500 para 500€\"}},\"required\":[\"modelo\",\"presupuesto\"]}"
+      }
+    },
+    {
+      "id": "n14-enviar-respuesta",
+      "name": "Enviar Respuesta WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2400, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $credentials.evolutionApi.url }}/message/sendText/{{ $credentials.evolutionApi.instanceName }}",
+        "authentication": "genericCredential",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $credentials.evolutionApi.apiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "application/json",
+        "rawBody": true,
+        "body": "={{\n  \"number\": $json.phone || $json.phoneNumber,\n  \"textMessage\": {\n    \"text\": $json.output || $json.response\n  },\n  \"options\": {\n    \"delay\": 1000,\n    \"linkPreview\": true\n  }\n}}",
+        "options": {
+          "timeout": 30000
+        },
+        "sendQuery": false
+      },
+      "credentials": {
+        "evolutionApi": {
+          "id": "__EVOLUTION_CREDENTIAL_ID__",
+          "name": "Evolution API"
+        }
+      }
+    },
+    {
+      "id": "n15-actualizar-chatter",
+      "name": "Actualizar Chatter Odoo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2700, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $credentials.odooApi.url }}/jsonrpc",
+        "authentication": "genericCredential",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "rawBody": true,
+        "body": "={{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\n      $credentials.odooApi.database,\n      $json.uid || 1,\n      $credentials.odooApi.password,\n      \"crm.lead\",\n      \"message_post\",\n      [$json.lead_id || $json.id],\n      {\n        \"body\": \"<p>🤖 <b>Intercambio Asistente Barbacoa</b></p><p>\" + ($json.output || 'Sin contenido').substring(0, 500).replace(/\\n/g, '<br>') + \"</p><p>📅 \" + new Date().toLocaleString() + \"</p>\",\n        \"subtype_xmlid\": \"mail.mt_note\"\n      }\n    ]\n  }\n} }}",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": false,
+        "sendQuery": false
+      },
+      "credentials": {
+        "odooApi": {
+          "id": "__ODOO_CREDENTIAL_ID__",
+          "name": "Odoo API"
+        }
+      }
+    },
+    {
+      "id": "n16-router-estado",
+      "name": "Router Estado Final",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [3000, 200],
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ ($json.estado_final || '').toString().toLowerCase().trim() }}",
+        "rules": [
+          {
+            "value2": "cualificado",
+            "output": 0
+          },
+          {
+            "value2": "descartado_precio",
+            "output": 1
+          },
+          {
+            "value2": "en_conversacion",
+            "output": 2
+          }
+        ],
+        "fallbackOutput": 2
+      }
+    },
+    {
+      "id": "n17-actualizar-estado-conv",
+      "name": "Actualizar Estado Conversación",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [3300, 700],
+      "parameters": {
+        "mode": "define",
+        "values": {
+          "string": [
+            {
+              "name": "stage",
+              "value": "conversando"
+            }
+          ],
+          "number": [
+            {
+              "name": "loop_count",
+              "value": 0
+            }
+          ]
+        },
+        "options": {
+          "keepExisting": true
+        }
+      }
+    },
+    {
+      "id": "n18-aviso-gmail-cualificado",
+      "name": "Aviso Gmail - Cualificado",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 1,
+      "position": [3300, 0],
+      "parameters": {
+        "operation": "send",
+        "subject": "🔥 Nuevo Lead Cualificado - Barbacoa - {{ $json.contact_name }}",
+        "htmlBody": "<h2>🔥 Nuevo Lead Cualificado - Barbacoa</h2><table border='1' cellpadding='8' cellspacing='0' style='border-collapse:collapse;font-family:Arial;'><tr><td><b>Nombre</b></td><td>{{ $json.contact_name }}</td></tr><tr><td><b>Teléfono</b></td><td>{{ $json.phone }}</td></tr><tr><td><b>Email</b></td><td>{{ $json.email }}</td></tr><tr><td><b>ID Lead</b></td><td>{{ $json.lead_id }}</td></tr></table><p>El asistente IA ha completado la personalización con este lead. Revisa el Chatter de Odoo para ver el detalle completo.</p><p>📅 {{ new Date().toLocaleString() }}</p>",
+        "toList": "comercial@empresa.com",
+        "options": {
+          "replyTo": "",
+          "ccList": "",
+          "bccList": ""
+        }
+      },
+      "credentials": {
+        "gmailOAuth": {
+          "id": "__GMAIL_CREDENTIAL_ID__",
+          "name": "Gmail API"
+        }
+      }
+    },
+    {
+      "id": "n19-odoo-stage-cualificado",
+      "name": "Odoo - Stage Presupuesto Pendiente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3600, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $credentials.odooApi.url }}/jsonrpc",
+        "authentication": "genericCredential",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "rawBody": true,
+        "body": "={{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\n      $credentials.odooApi.database,\n      $json.uid || 1,\n      $credentials.odooApi.password,\n      \"crm.lead\",\n      \"write\",\n      [[$json.lead_id || $json.id]],\n      {\n        \"stage_id\": ID_STAGE_PRESUPUESTO_PENDIENTE,\n        \"tag_ids\": [[4, ID_TAG_PERSONALIZADO]]\n      }\n    ]\n  }\n} }}",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": false,
+        "sendQuery": false
+      },
+      "credentials": {
+        "odooApi": {
+          "id": "__ODOO_CREDENTIAL_ID__",
+          "name": "Odoo API"
+        }
+      }
+    },
+    {
+      "id": "n20-odoo-marcar-perdido",
+      "name": "Odoo - Marcar Perdido",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3300, 400],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $credentials.odooApi.url }}/jsonrpc",
+        "authentication": "genericCredential",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "rawBody": true,
+        "body": "={{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\n      $credentials.odooApi.database,\n      $json.uid || 1,\n      $credentials.odooApi.password,\n      \"crm.lead\",\n      \"write\",\n      [[$json.lead_id || $json.id]],\n      {\n        \"stage_id\": ID_STAGE_PERDIDO,\n        \"lost_reason\": \"No cualificado - Precio\"\n      }\n    ]\n  }\n} }}",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": false,
+        "sendQuery": false
+      },
+      "credentials": {
+        "odooApi": {
+          "id": "__ODOO_CREDENTIAL_ID__",
+          "name": "Odoo API"
+        }
+      }
+    },
+    {
+      "id": "n21-comprobacion-caducidad",
+      "name": "Comprobación Caducidad",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2100, 500],
+      "parameters": {}
+    },
+    {
+      "id": "n22-if-seguimiento",
+      "name": "IF Seguimiento",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2400, 500],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c-followup",
+              "leftValue": "={{ $json.followup_count || 0 }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n23-enviar-recordatorio",
+      "name": "Enviar Recordatorio WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2700, 400],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $credentials.evolutionApi.url }}/message/sendText/{{ $credentials.evolutionApi.instanceName }}",
+        "authentication": "genericCredential",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $credentials.evolutionApi.apiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "application/json",
+        "rawBody": true,
+        "body": "={{\n  \"number\": $json.phone || $json.phoneNumber,\n  \"textMessage\": {\n    \"text\": \"¡Hola \" + ($json.contact_name || '') + \"! 👋 ¿Pudiste ver el catálogo de barbacoas que te enviamos? 🔥 Si tienes cualquier duda o quieres que te ayude a elegir el modelo ideal, estoy aquí para ti. ¡Escríbeme cuando quieras!\"\n  },\n  \"options\": {\n    \"delay\": 1000,\n    \"linkPreview\": false\n  }\n}}",
+        "options": {
+          "timeout": 30000
+        },
+        "sendQuery": false
+      },
+      "credentials": {
+        "evolutionApi": {
+          "id": "__EVOLUTION_CREDENTIAL_ID__",
+          "name": "Evolution API"
+        }
+      }
+    },
+    {
+      "id": "n24-aviso-gmail-seguimiento",
+      "name": "Aviso Gmail - Seguimiento Manual",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 1,
+      "position": [2700, 700],
+      "parameters": {
+        "operation": "send",
+        "subject": "⚠️ Lead sin respuesta - Barbacoa - {{ $json.contact_name }}",
+        "htmlBody": "<h2>⚠️ Lead sin respuesta tras seguimiento</h2><table border='1' cellpadding='8' cellspacing='0' style='border-collapse:collapse;font-family:Arial;'><tr><td><b>Nombre</b></td><td>{{ $json.contact_name }}</td></tr><tr><td><b>Teléfono</b></td><td>{{ $json.phone }}</td></tr><tr><td><b>Email</b></td><td>{{ $json.email }}</td></tr><tr><td><b>ID Lead</b></td><td>{{ $json.lead_id || $json.id }}</td></tr></table><p>Este lead no ha respondido a los mensajes automáticos de WhatsApp (catálogo + recordatorio).</p><p><b>Requiere llamada/contacto manual urgente.</b></p><p>📅 {{ new Date().toLocaleString() }}</p>",
+        "toList": "comercial@empresa.com",
+        "options": {
+          "replyTo": "",
+          "ccList": "",
+          "bccList": ""
+        }
+      },
+      "credentials": {
+        "gmailOAuth": {
+          "id": "__GMAIL_CREDENTIAL_ID__",
+          "name": "Gmail API"
+        }
+      }
+    },
+    {
+      "id": "n25-odoo-stage-seguimiento",
+      "name": "Odoo - Stage Seguimiento Manual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3000, 700],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $credentials.odooApi.url }}/jsonrpc",
+        "authentication": "genericCredential",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "rawBody": true,
+        "body": "={{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\n      $credentials.odooApi.database,\n      $json.uid || 1,\n      $credentials.odooApi.password,\n      \"crm.lead\",\n      \"write\",\n      [[$json.lead_id || $json.id]],\n      {\n        \"stage_id\": ID_STAGE_SEGUIMIENTO_MANUAL\n      }\n    ]\n  }\n} }}",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": false,
+        "sendQuery": false
+      },
+      "credentials": {
+        "odooApi": {
+          "id": "__ODOO_CREDENTIAL_ID__",
+          "name": "Odoo API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Odoo": {
+      "main": [
+        [
+          {
+            "node": "Filtro Barbacoa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtro Barbacoa": {
+      "main": [
+        [
+          {
+            "node": "Obtener Datos Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fin - No Barbacoa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Datos Lead": {
+      "main": [
+        [
+          {
+            "node": "Inicializar Sesión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inicializar Sesión": {
+      "main": [
+        [
+          {
+            "node": "Enviar Catálogo WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Catálogo WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Registrar Nota - Primer Contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Nota - Primer Contacto": {
+      "main": [
+        [
+          {
+            "node": "Esperar Respuesta 24h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Esperar Respuesta 24h": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Conversacional",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Comprobación Caducidad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Conversacional": {
+      "ai_model": [
+        [
+          {
+            "node": "OpenAI Chat Model",
+            "type": "ai_model",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_memory": [
+        [
+          {
+            "node": "Window Buffer Memory",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_tool": [
+        [
+          {
+            "node": "Tool - ObtenerInfoModelos",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Tool - RegistrarNotaOdoo",
+            "type": "ai_tool",
+            "index": 1
+          },
+          {
+            "node": "Tool - EvaluarPresupuesto",
+            "type": "ai_tool",
+            "index": 2
+          }
+        ]
+      ],
+      "main": [
+        [
+          {
+            "node": "Enviar Respuesta WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Respuesta WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Chatter Odoo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Chatter Odoo": {
+      "main": [
+        [
+          {
+            "node": "Router Estado Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router Estado Final": {
+      "main": [
+        [
+          {
+            "node": "Aviso Gmail - Cualificado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Odoo - Marcar Perdido",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Actualizar Estado Conversación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aviso Gmail - Cualificado": {
+      "main": [
+        [
+          {
+            "node": "Odoo - Stage Presupuesto Pendiente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Estado Conversación": {
+      "main": [
+        [
+          {
+            "node": "Esperar Respuesta 24h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobación Caducidad": {
+      "main": [
+        [
+          {
+            "node": "IF Seguimiento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Seguimiento": {
+      "main": [
+        [
+          {
+            "node": "Enviar Recordatorio WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aviso Gmail - Seguimiento Manual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Recordatorio WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Esperar Respuesta 24h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aviso Gmail - Seguimiento Manual": {
+      "main": [
+        [
+          {
+            "node": "Odoo - Stage Seguimiento Manual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "versionId": "v1-barbacoa-assistant",
+  "triggerCount": 1,
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "id": "tag-barbacoa-mvp",
+      "name": "MVP Barbacoa",
+      "color": "#7C3AED"
+    }
+  ],
+  "id": "wf-barbacoa-assistant-mvp",
+  "staticData": null
+}
