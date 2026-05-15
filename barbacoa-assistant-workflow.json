@@ -6,7 +6,10 @@
       "name": "Webhook Odoo",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
-      "position": [0, 300],
+      "position": [
+        0,
+        300
+      ],
       "parameters": {
         "httpMethod": "POST",
         "path": "odoo-lead-barbacoa",
@@ -22,7 +25,10 @@
       "name": "Filtro Barbacoa",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [300, 300],
+      "position": [
+        300,
+        300
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -59,19 +65,25 @@
       "name": "Fin - No Barbacoa",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [600, 600],
+      "position": [
+        600,
+        600
+      ],
       "parameters": {}
     },
     {
       "id": "n3-buscar-sheets",
-      "name": "Buscar en Números Barbacoa",
+      "name": "Buscar en N\u00fameros Barbacoa",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
-      "position": [600, 300],
+      "position": [
+        600,
+        300
+      ],
       "parameters": {
         "operation": "read",
         "documentId": "={{ $credentials.googleSheetsOAuth2Api.spreadsheetId }}",
-        "sheetName": "Números Barbacoa",
+        "sheetName": "N\u00fameros Barbacoa",
         "range": "A:E",
         "options": {
           "returnAll": false,
@@ -99,7 +111,10 @@
       "name": "IF Lead en Sheets",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [750, 300],
+      "position": [
+        750,
+        300
+      ],
       "parameters": {
         "conditions": {
           "options": {},
@@ -120,14 +135,17 @@
     },
     {
       "id": "n3c-anadir-sheets",
-      "name": "Añadir a Números Barbacoa",
+      "name": "A\u00f1adir a N\u00fameros Barbacoa",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
-      "position": [600, 500],
+      "position": [
+        600,
+        500
+      ],
       "parameters": {
         "operation": "append",
         "documentId": "={{ $credentials.googleSheetsOAuth2Api.spreadsheetId }}",
-        "sheetName": "Números Barbacoa",
+        "sheetName": "N\u00fameros Barbacoa",
         "range": "A:E",
         "columns": {
           "mappingMode": "defineBelow",
@@ -156,7 +174,10 @@
       "name": "Obtener Datos Lead",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [900, 300],
+      "position": [
+        900,
+        300
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $credentials.odooApi.url }}/jsonrpc",
@@ -194,10 +215,13 @@
     },
     {
       "id": "n5-inicializar-sesion",
-      "name": "Inicializar Sesión",
+      "name": "Inicializar Sesi\u00f3n",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
-      "position": [1200, 300],
+      "position": [
+        1200,
+        300
+      ],
       "parameters": {
         "mode": "define",
         "values": {
@@ -241,10 +265,13 @@
     },
     {
       "id": "n6-enviar-catalogo",
-      "name": "Enviar Catálogo WhatsApp",
+      "name": "Enviar Cat\u00e1logo WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1500, 300],
+      "position": [
+        1500,
+        300
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $credentials.evolutionApi.url }}/message/sendMedia/{{ $credentials.evolutionApi.instanceName }}",
@@ -262,7 +289,7 @@
         "sendBody": true,
         "contentType": "application/json",
         "rawBody": true,
-        "body": "={{\n  \"number\": $json.phone,\n  \"mediaMessage\": {\n    \"mediatype\": \"image\",\n    \"caption\": \"¡Hola \" + $json.contact_name + \"! 👋 Somos [Empresa]. Hemos recibido tu consulta sobre nuestras barbacoas 🔥. Te adjunto nuestro catálogo con los modelos disponibles. ¿En cuál de ellos estabas interesado/a?\",\n    \"media\": \"URL_DE_LA_IMAGEN_DEL_CATALOGO\"\n  }\n}}",
+        "body": "={{\n  \"number\": $json.phone,\n  \"mediaMessage\": {\n    \"mediatype\": \"image\",\n    \"caption\": \"\u00a1Hola \" + $json.contact_name + \"! \ud83d\udc4b Somos [Empresa]. Hemos recibido tu consulta sobre nuestras barbacoas \ud83d\udd25. Te adjunto nuestro cat\u00e1logo con los modelos disponibles. \u00bfEn cu\u00e1l de ellos estabas interesado/a?\",\n    \"media\": \"URL_DE_LA_IMAGEN_DEL_CATALOGO\"\n  }\n}}",
         "options": {
           "timeout": 30000
         },
@@ -280,7 +307,10 @@
       "name": "Registrar Nota - Primer Contacto",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1800, 300],
+      "position": [
+        1800,
+        300
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $credentials.odooApi.url }}/jsonrpc",
@@ -289,7 +319,7 @@
         "sendBody": true,
         "contentType": "application/json",
         "rawBody": true,
-        "body": "={{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\n      $credentials.odooApi.database,\n      $json.uid || 1,\n      $credentials.odooApi.password,\n      \"crm.lead\",\n      \"message_post\",\n      [$json.lead_id || $json.id],\n      {\n        \"body\": \"<p>📤 <b>Primer contacto enviado vía Evolution API (WhatsApp)</b></p><p>Catálogo de barbacoas enviado al cliente.</p><p>Teléfono: \" + ($json.phone || '') + \"</p><p>Fecha: \" + new Date().toLocaleString() + \"</p>\"\n      }\n    ]\n  }\n} }}",
+        "body": "={{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\n      $credentials.odooApi.database,\n      $json.uid || 1,\n      $credentials.odooApi.password,\n      \"crm.lead\",\n      \"message_post\",\n      [$json.lead_id || $json.id],\n      {\n        \"body\": \"<p>\ud83d\udce4 <b>Primer contacto enviado v\u00eda Evolution API (WhatsApp)</b></p><p>Cat\u00e1logo de barbacoas enviado al cliente.</p><p>Tel\u00e9fono: \" + ($json.phone || '') + \"</p><p>Fecha: \" + new Date().toLocaleString() + \"</p>\"\n      }\n    ]\n  }\n} }}",
         "options": {
           "timeout": 30000
         },
@@ -308,7 +338,10 @@
       "name": "Esperar Respuesta General",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [2100, 300],
+      "position": [
+        2100,
+        300
+      ],
       "parameters": {
         "resume": "webhook",
         "limit": {
@@ -320,112 +353,18 @@
       }
     },
     {
-      "id": "n8b-if-modelo-enviado",
-      "name": "IF Modelo Enviado",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [2250, 300],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "c-modelo-enviado",
-              "leftValue": "={{ ($json.modelo_enviado || 'false').toString().toLowerCase() }}",
-              "rightValue": "true",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        }
-      }
-    },
-    {
-      "id": "n9-buscar-modelo-sheets",
-      "name": "Buscar Modelo en Sheets",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
-      "position": [2400, 300],
-      "parameters": {
-        "operation": "read",
-        "documentId": "={{ $credentials.googleSheetsOAuth2Api.spreadsheetId }}",
-        "sheetName": "Modelos Barbacoa",
-        "range": "A:G",
-        "options": {
-          "returnAll": true
-        }
-      },
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "__GOOGLE_SHEETS_CREDENTIAL_ID__",
-          "name": "Google Sheets"
-        }
-      }
-    },
-    {
-      "id": "n10-filtrar-modelo",
-      "name": "Filtrar Modelo Cliente",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 1,
-      "position": [2700, 300],
-      "parameters": {
-        "language": "javaScript",
-        "code": "// Buscar en los datos de Sheets el modelo que mencionó el cliente\nconst modelos = $input.all();\nconst mensajeCliente = ($json.mensaje || $json.text || $json.message || '').toLowerCase();\nlet modeloEncontrado = null;\n\nfor (const row of modelos) {\n  const nombreModelo = (row.json.nombre || row.json.modelo || '').toLowerCase();\n  if (nombreModelo && mensajeCliente.includes(nombreModelo)) {\n    modeloEncontrado = row.json;\n    break;\n  }\n}\n\nif (modeloEncontrado) {\n  return [{\n    json: {\n      ...$json,\n      modelo_nombre: modeloEncontrado.nombre || modeloEncontrado.modelo,\n      modelo_precio: modeloEncontrado.precio,\n      modelo_material: modeloEncontrado.material,\n      modelo_tamano: modeloEncontrado.tamano || modeloEncontrado.tamaño,\n      modelo_descripcion: modeloEncontrado.descripcion,\n      modelo_mensaje: modeloEncontrado.mensaje_whatsapp || modeloEncontrado.mensaje,\n      modelo_imagen: modeloEncontrado.imagen_url || '',\n      modelo_enviado: 'true'\n    }\n  }];\n} else {\n  // No encontró el modelo, pasa igual para que el AI Agent lo maneje\n  return [{\n    json: {\n      ...$json,\n      modelo_no_encontrado: true,\n      modelo_enviado: 'true'\n    }\n  }];\n}"
-      }
-    },
-    {
-      "id": "n11-enviar-mensaje-modelo",
-      "name": "Enviar Mensaje del Modelo",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [3000, 300],
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $credentials.evolutionApi.url }}/message/sendText/{{ $credentials.evolutionApi.instanceName }}",
-        "authentication": "genericCredential",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "={{ $credentials.evolutionApi.apiKey }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "application/json",
-        "rawBody": true,
-        "body": "={{\n  \"number\": $json.phone,\n  \"textMessage\": {\n    \"text\": $json.modelo_mensaje || \"¡Hemos recibido tu interés! 😊 Un asesor te atenderá en breve para ayudarte con la elección.\"\n  },\n  \"options\": {\n    \"delay\": 1000,\n    \"linkPreview\": true\n  }\n}}",
-        "options": {
-          "timeout": 30000
-        },
-        "sendQuery": false
-      },
-      "credentials": {
-        "evolutionApi": {
-          "id": "__EVOLUTION_CREDENTIAL_ID__",
-          "name": "Evolution API"
-        }
-      }
-    },
-    {
       "id": "n12-ai-agent",
       "name": "AI Agent - Planificador",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.1,
-      "position": [3300, 300],
+      "position": [
+        3300,
+        300
+      ],
       "parameters": {
         "agentType": "openAiFunctionsAgent",
         "options": {
-          "systemPrompt": "Eres un asistente experto en ventas de barbacoas por WhatsApp. Tu objetivo es guiar al cliente por las siguientes fases en orden:\n\n## FASE 1: RESOLVER DUDAS (si las hay)\nSi el cliente tiene preguntas sobre el modelo que ha elegido, respóndelas usando la herramienta 'BuscarInfoModelo'. Cuando el cliente diga que ya no tiene más dudas, pasa a la FASE 2.\n\n## FASE 2: PLANIFICADOR DE PREGUNTAS\nHaz las siguientes preguntas UNA A UNA (espera respuesta antes de pasar a la siguiente). Usa la herramienta 'RegistrarNotaOdoo' para guardar CADA respuesta inmediatamente:\n\nP1: \"¿Qué tamaño prefieres? 🎯 Pequeña (60cm), Mediana (90cm) o Grande (120cm)?\"\nP2: \"¿Qué material te gusta más? 🔧 Acero inoxidable, Hierro fundido o ¿Prefieres que te recomiende?\"\nP3: \"¿Qué color o estilo prefieres? 🎨 Clásico negro, Acero pulido, Blanco, o Rojo?\nP4: \"¿Qué extras te interesan? ✨ Tapa, Ruedas, Parrilla adicional, Termómetro (puedes elegir varios)\"  \nP5 (CLAVE): \"¿Qué presupuesto aproximado tienes en mente? 💰 Menos de 300€, 300-600€, 600-1000€, o Más de 1000€\"\n\nCuando el cliente responda P5 (presupuesto), usa la herramienta 'EvaluarPresupuesto' para validar.\n\n## FASE 3: VALIDACIÓN Y CIERRE\nBasado en el resultado de EvaluarPresupuesto:\n- compatible: Responde \"Genial, tenemos todo correcto. Enseguida uno de nuestros decoradores o exterioristas te contestará el mensaje. ¡Gracias por tu interés! 🎉\" y establece estado_final = 'cualificado'.\n- recomendar: Ofrece el modelo alternativo y pregunta si le interesa. Si dice que sí, vuelve a FASE 2. Si dice que no, establece estado_final = 'descartado_precio'.\n- descartado: Responde amablemente que el presupuesto no se ajusta a nuestros modelos y despídete. Establece estado_final = 'descartado_precio'.\n\nREGLAS:\n- Siempre establece estado_final al final de cada interacción: 'cualificado', 'descartado_precio', o 'en_conversacion'.\n- estado_final='en_conversacion' cuando sigues en FASE 1 o FASE 2 y esperas más respuestas.\n- Usa 'BuscarInfoModelo' para obtener info de modelos desde la base de datos en Google Sheets.\n- Usa 'RegistrarNotaOdoo' para guardar cada respuesta del planificador en Odoo.\n- Usa 'EvaluarPresupuesto' solo cuando tengas el modelo SELECCIONADO y el PRESUPUESTO.",
+          "systemPrompt": "Eres un asistente experto en ventas de barbacoas por WhatsApp. Tu objetivo es guiar al cliente por las siguientes fases en orden:\n\n## FASE 1: RESOLVER DUDAS (si las hay)\nSi el cliente tiene preguntas sobre el modelo que ha elegido, resp\u00f3ndelas usando la herramienta 'BuscarInfoModelo'. Cuando el cliente diga que ya no tiene m\u00e1s dudas, pasa a la FASE 2.\n\n## FASE 2: PLANIFICADOR DE PREGUNTAS\nHaz las siguientes preguntas UNA A UNA (espera respuesta antes de pasar a la siguiente). Usa la herramienta 'RegistrarNotaOdoo' para guardar CADA respuesta inmediatamente:\n\nP1: \"\u00bfQu\u00e9 tama\u00f1o prefieres? \ud83c\udfaf Peque\u00f1a (60cm), Mediana (90cm) o Grande (120cm)?\"\nP2: \"\u00bfQu\u00e9 material te gusta m\u00e1s? \ud83d\udd27 Acero inoxidable, Hierro fundido o \u00bfPrefieres que te recomiende?\"\nP3: \"\u00bfQu\u00e9 color o estilo prefieres? \ud83c\udfa8 Cl\u00e1sico negro, Acero pulido, Blanco, o Rojo?\nP4: \"\u00bfQu\u00e9 extras te interesan? \u2728 Tapa, Ruedas, Parrilla adicional, Term\u00f3metro (puedes elegir varios)\"  \nP5 (CLAVE): \"\u00bfQu\u00e9 presupuesto aproximado tienes en mente? \ud83d\udcb0 Menos de 300\u20ac, 300-600\u20ac, 600-1000\u20ac, o M\u00e1s de 1000\u20ac\"\n\nCuando el cliente responda P5 (presupuesto), usa la herramienta 'EvaluarPresupuesto' para validar.\n\n## FASE 3: VALIDACI\u00d3N Y CIERRE\nBasado en el resultado de EvaluarPresupuesto:\n- compatible: Responde \"Genial, tenemos todo correcto. Enseguida uno de nuestros decoradores o exterioristas te contestar\u00e1 el mensaje. \u00a1Gracias por tu inter\u00e9s! \ud83c\udf89\" y establece estado_final = 'cualificado'.\n- recomendar: Ofrece el modelo alternativo y pregunta si le interesa. Si dice que s\u00ed, vuelve a FASE 2. Si dice que no, establece estado_final = 'descartado_precio'.\n- descartado: Responde amablemente que el presupuesto no se ajusta a nuestros modelos y desp\u00eddete. Establece estado_final = 'descartado_precio'.\n\nREGLAS:\n- Siempre establece estado_final al final de cada interacci\u00f3n: 'cualificado', 'descartado_precio', o 'en_conversacion'.\n- estado_final='en_conversacion' cuando sigues en FASE 1 o FASE 2 y esperas m\u00e1s respuestas.\n- Usa 'BuscarInfoModelo' para obtener info de modelos desde la base de datos en Google Sheets.\n- Usa 'RegistrarNotaOdoo' para guardar cada respuesta del planificador en Odoo.\n- Usa 'EvaluarPresupuesto' solo cuando tengas el modelo SELECCIONADO y el PRESUPUESTO.",
           "maxIterations": 15
         },
         "promptType": "define"
@@ -436,7 +375,10 @@
       "name": "OpenAI Chat Model",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
-      "position": [3100, 0],
+      "position": [
+        3100,
+        0
+      ],
       "parameters": {
         "model": "gpt-4o",
         "temperature": 0.7,
@@ -454,7 +396,10 @@
       "name": "Window Buffer Memory",
       "type": "@n8n/n8n-nodes-langchain.memoryWindowBuffer",
       "typeVersion": 1,
-      "position": [3100, 600],
+      "position": [
+        3100,
+        600
+      ],
       "parameters": {
         "sessionKey": "={{ $json.phone || $json.contact_name }}",
         "contextWindowLength": 15
@@ -465,11 +410,14 @@
       "name": "Tool - BuscarInfoModelo",
       "type": "@n8n/n8n-nodes-langchain.toolCode",
       "typeVersion": 1,
-      "position": [2900, 700],
+      "position": [
+        2900,
+        700
+      ],
       "parameters": {
         "name": "buscarInfoModelo",
-        "description": "Busca información detallada de un modelo de barbacoa en la base de datos de Google Sheets. Úsala cuando el cliente pregunte por un modelo específico. El parámetro modelo es el nombre del modelo que busca el cliente.",
-        "code": "// Tool: BuscarInfoModelo\n// Lee información de modelos desde Google Sheets (vía API HTTP)\n// En producción: esta tool haría una llamada HTTP a Google Sheets API\n\nconst modelos = [\n  { nombre: 'Clásica', precio: 299, material: 'Acero inoxidable', tamaño: 'Pequeña (60cm)', descripcion: 'Perfecta para terrazas y balcones. Ligera y fácil de transportar.', extras: ['Parrilla'] },\n  { nombre: 'Premium', precio: 599, material: 'Hierro fundido', tamaño: 'Mediana (90cm)', descripcion: 'Ideal para jardines y reuniones familiares. Retención de calor excepcional.', extras: ['Tapa', 'Parrilla', 'Ruedas'] },\n  { nombre: 'Pro', precio: 999, material: 'Acero inoxidable + Fundición', tamaño: 'Grande (120cm)', descripcion: 'Para expertos barbacoeros y grandes eventos. Doble cámara de cocción.', extras: ['Tapa', 'Ruedas', 'Parrilla', 'Termómetro'] },\n  { nombre: 'Deluxe', precio: 1499, material: 'Acero inoxidable premium', tamaño: 'Extra Grande (150cm)', descripcion: 'La experiencia definitiva en barbacoas. Con mesas laterales y gancho para utensilios.', extras: ['Tapa', 'Ruedas', 'Parrilla', 'Termómetro', 'Gancho'] }\n];\n\nconst modeloBuscado = ($params.modelo || '').toLowerCase().trim();\n\nif (!modeloBuscado) {\n  const lista = modelos.map(m => `• ${m.nombre} - ${m.precio}€ (${m.tamaño})`).join('\\n');\n  return JSON.stringify({ disponibles: modelos.map(m => m.nombre), mensaje: `Modelos disponibles:\\n${lista}` });\n}\n\nconst match = modelos.find(m =>\n  m.nombre.toLowerCase().includes(modeloBuscado) ||\n  modeloBuscado.includes(m.nombre.toLowerCase())\n);\n\nif (match) {\n  return JSON.stringify({\n    modelo: match.nombre,\n    precio: match.precio,\n    material: match.material,\n    tamaño: match.tamaño,\n    descripción: match.descripcion,\n    extras: match.extras,\n    mensaje: `🔥 *${match.nombre}*\\n💰 Precio: *${match.precio}€*\\n📏 Tamaño: *${match.tamaño}*\\n🔧 Material: *${match.material}*\\n📝 ${match.descripcion}\\n✨ Extras: ${match.extras.join(', ')}`\n  });\n}\n\nreturn JSON.stringify({\n  error: `Modelo \"${$params.modelo}\" no encontrado`,\n  disponibles: modelos.map(m => m.nombre),\n  mensaje: `Los modelos disponibles son: ${modelos.map(m => m.nombre).join(', ')}. ¿Te gustaría conocer alguno?`\n});",
+        "description": "Busca informaci\u00f3n detallada de un modelo de barbacoa en la base de datos de Google Sheets. \u00dasala cuando el cliente pregunte por un modelo espec\u00edfico. El par\u00e1metro modelo es el nombre del modelo que busca el cliente.",
+        "code": "// Tool: BuscarInfoModelo\n// Lee informaci\u00f3n de modelos desde Google Sheets (v\u00eda API HTTP)\n// En producci\u00f3n: esta tool har\u00eda una llamada HTTP a Google Sheets API\n\nconst modelos = [\n  { nombre: 'Cl\u00e1sica', precio: 299, material: 'Acero inoxidable', tama\u00f1o: 'Peque\u00f1a (60cm)', descripcion: 'Perfecta para terrazas y balcones. Ligera y f\u00e1cil de transportar.', extras: ['Parrilla'] },\n  { nombre: 'Premium', precio: 599, material: 'Hierro fundido', tama\u00f1o: 'Mediana (90cm)', descripcion: 'Ideal para jardines y reuniones familiares. Retenci\u00f3n de calor excepcional.', extras: ['Tapa', 'Parrilla', 'Ruedas'] },\n  { nombre: 'Pro', precio: 999, material: 'Acero inoxidable + Fundici\u00f3n', tama\u00f1o: 'Grande (120cm)', descripcion: 'Para expertos barbacoeros y grandes eventos. Doble c\u00e1mara de cocci\u00f3n.', extras: ['Tapa', 'Ruedas', 'Parrilla', 'Term\u00f3metro'] },\n  { nombre: 'Deluxe', precio: 1499, material: 'Acero inoxidable premium', tama\u00f1o: 'Extra Grande (150cm)', descripcion: 'La experiencia definitiva en barbacoas. Con mesas laterales y gancho para utensilios.', extras: ['Tapa', 'Ruedas', 'Parrilla', 'Term\u00f3metro', 'Gancho'] }\n];\n\nconst modeloBuscado = ($params.modelo || '').toLowerCase().trim();\n\nif (!modeloBuscado) {\n  const lista = modelos.map(m => `\u2022 ${m.nombre} - ${m.precio}\u20ac (${m.tama\u00f1o})`).join('\\n');\n  return JSON.stringify({ disponibles: modelos.map(m => m.nombre), mensaje: `Modelos disponibles:\\n${lista}` });\n}\n\nconst match = modelos.find(m =>\n  m.nombre.toLowerCase().includes(modeloBuscado) ||\n  modeloBuscado.includes(m.nombre.toLowerCase())\n);\n\nif (match) {\n  return JSON.stringify({\n    modelo: match.nombre,\n    precio: match.precio,\n    material: match.material,\n    tama\u00f1o: match.tama\u00f1o,\n    descripci\u00f3n: match.descripcion,\n    extras: match.extras,\n    mensaje: `\ud83d\udd25 *${match.nombre}*\\n\ud83d\udcb0 Precio: *${match.precio}\u20ac*\\n\ud83d\udccf Tama\u00f1o: *${match.tama\u00f1o}*\\n\ud83d\udd27 Material: *${match.material}*\\n\ud83d\udcdd ${match.descripcion}\\n\u2728 Extras: ${match.extras.join(', ')}`\n  });\n}\n\nreturn JSON.stringify({\n  error: `Modelo \"${$params.modelo}\" no encontrado`,\n  disponibles: modelos.map(m => m.nombre),\n  mensaje: `Los modelos disponibles son: ${modelos.map(m => m.nombre).join(', ')}. \u00bfTe gustar\u00eda conocer alguno?`\n});",
         "parameters": "{\"type\":\"object\",\"properties\":{\"modelo\":{\"type\":\"string\",\"description\":\"Nombre del modelo de barbacoa a consultar\"}},\"required\":[\"modelo\"]}"
       }
     },
@@ -478,12 +426,15 @@
       "name": "Tool - RegistrarNotaOdoo",
       "type": "@n8n/n8n-nodes-langchain.toolCode",
       "typeVersion": 1,
-      "position": [3100, 700],
+      "position": [
+        3100,
+        700
+      ],
       "parameters": {
         "name": "registrarNotaOdoo",
-        "description": "Registra una nota/resumen en el lead de Odoo (Chatter / message_post). Úsala para guardar cada respuesta del planificador, decisiones del cliente, o resúmenes importantes.",
+        "description": "Registra una nota/resumen en el lead de Odoo (Chatter / message_post). \u00dasala para guardar cada respuesta del planificador, decisiones del cliente, o res\u00famenes importantes.",
         "code": "// Tool: RegistrarNotaOdoo\n// Registra una nota en el Chatter de Odoo\n\nconst texto = $params.texto || 'Sin contenido';\n\nreturn JSON.stringify({\n  success: true,\n  message: 'Nota registrada en Odoo',\n  nota: texto.substring(0, 200)\n});",
-        "parameters": "{\"type\":\"object\",\"properties\":{\"texto\":{\"type\":\"string\",\"description\":\"Texto completo de la nota a registrar. Incluye qué respondió el cliente y en qué fase del planificador va.\"}},\"required\":[\"texto\"]}"
+        "parameters": "{\"type\":\"object\",\"properties\":{\"texto\":{\"type\":\"string\",\"description\":\"Texto completo de la nota a registrar. Incluye qu\u00e9 respondi\u00f3 el cliente y en qu\u00e9 fase del planificador va.\"}},\"required\":[\"texto\"]}"
       }
     },
     {
@@ -491,12 +442,15 @@
       "name": "Tool - EvaluarPresupuesto",
       "type": "@n8n/n8n-nodes-langchain.toolCode",
       "typeVersion": 1,
-      "position": [3300, 700],
+      "position": [
+        3300,
+        700
+      ],
       "parameters": {
         "name": "evaluarPresupuesto",
-        "description": "Evalúa si el presupuesto del cliente coincide con el precio del modelo seleccionado. Si no coincide, recomienda una alternativa más económica si existe. CRÍTICO: solo úsala cuando tengas tanto el modelo como el presupuesto del cliente.",
-        "code": "// Tool: EvaluarPresupuesto\n// Compara presupuesto del cliente con precios reales\n\nconst modelos = [\n  { nombre: 'Clásica', precio: 299 },\n  { nombre: 'Premium', precio: 599 },\n  { nombre: 'Pro', precio: 999 },\n  { nombre: 'Deluxe', precio: 1499 }\n];\n\nconst modeloNombre = ($params.modelo || '').toLowerCase();\nconst presupuesto = parseFloat($params.presupuesto) || 0;\n\nconst match = modelos.find(m => m.nombre.toLowerCase().includes(modeloNombre));\n\nif (!match) {\n  const asequibles = modelos.filter(m => m.precio <= presupuesto);\n  if (asequibles.length > 0) {\n    const mejor = asequibles[asequibles.length - 1];\n    return JSON.stringify({ resultado: 'recomendar', modelo: mejor.nombre, precio: mejor.precio, mensaje: `Con ${presupuesto}€ te recomiendo ${mejor.nombre} por ${mejor.precio}€` });\n  }\n  return JSON.stringify({ resultado: 'descartado', precio_minimo: 299, mensaje: `Con ${presupuesto}€ no tenemos opciones. Precio mínimo: 299€` });\n}\n\nif (presupuesto >= match.precio) {\n  return JSON.stringify({ resultado: 'compatible', modelo: match.nombre, precio: match.precio, presupuesto_cliente: presupuesto, mensaje: `✓ ${presupuesto}€ es suficiente para ${match.nombre} (${match.precio}€)` });\n}\n\nconst alternativas = modelos.filter(m => m.precio <= presupuesto);\nif (alternativas.length > 0) {\n  const mejor = alternativas[alternativas.length - 1];\n  return JSON.stringify({ resultado: 'recomendar', modelo_solicitado: match.nombre, precio_modelo: match.precio, alternativa: mejor.nombre, precio_alternativa: mejor.precio, mensaje: `${match.nombre} cuesta ${match.precio}€, pero con ${presupuesto}€ te recomiendo ${mejor.nombre} por ${mejor.precio}€` });\n}\n\nreturn JSON.stringify({ resultado: 'descartado', modelo_solicitado: match.nombre, precio_modelo: match.precio, precio_minimo: 299, mensaje: `Ningún modelo disponible por ${presupuesto}€. Precio mínimo: 299€` });",
-        "parameters": "{\"type\":\"object\",\"properties\":{\"modelo\":{\"type\":\"string\",\"description\":\"Nombre del modelo de barbacoa que el cliente ha seleccionado\"},\"presupuesto\":{\"type\":\"number\",\"description\":\"Presupuesto del cliente en euros (€). Ejemplo: 500\"}},\"required\":[\"modelo\",\"presupuesto\"]}"
+        "description": "Eval\u00faa si el presupuesto del cliente coincide con el precio del modelo seleccionado. Si no coincide, recomienda una alternativa m\u00e1s econ\u00f3mica si existe. CR\u00cdTICO: solo \u00fasala cuando tengas tanto el modelo como el presupuesto del cliente.",
+        "code": "// Tool: EvaluarPresupuesto\n// Compara presupuesto del cliente con precios reales\n\nconst modelos = [\n  { nombre: 'Cl\u00e1sica', precio: 299 },\n  { nombre: 'Premium', precio: 599 },\n  { nombre: 'Pro', precio: 999 },\n  { nombre: 'Deluxe', precio: 1499 }\n];\n\nconst modeloNombre = ($params.modelo || '').toLowerCase();\nconst presupuesto = parseFloat($params.presupuesto) || 0;\n\nconst match = modelos.find(m => m.nombre.toLowerCase().includes(modeloNombre));\n\nif (!match) {\n  const asequibles = modelos.filter(m => m.precio <= presupuesto);\n  if (asequibles.length > 0) {\n    const mejor = asequibles[asequibles.length - 1];\n    return JSON.stringify({ resultado: 'recomendar', modelo: mejor.nombre, precio: mejor.precio, mensaje: `Con ${presupuesto}\u20ac te recomiendo ${mejor.nombre} por ${mejor.precio}\u20ac` });\n  }\n  return JSON.stringify({ resultado: 'descartado', precio_minimo: 299, mensaje: `Con ${presupuesto}\u20ac no tenemos opciones. Precio m\u00ednimo: 299\u20ac` });\n}\n\nif (presupuesto >= match.precio) {\n  return JSON.stringify({ resultado: 'compatible', modelo: match.nombre, precio: match.precio, presupuesto_cliente: presupuesto, mensaje: `\u2713 ${presupuesto}\u20ac es suficiente para ${match.nombre} (${match.precio}\u20ac)` });\n}\n\nconst alternativas = modelos.filter(m => m.precio <= presupuesto);\nif (alternativas.length > 0) {\n  const mejor = alternativas[alternativas.length - 1];\n  return JSON.stringify({ resultado: 'recomendar', modelo_solicitado: match.nombre, precio_modelo: match.precio, alternativa: mejor.nombre, precio_alternativa: mejor.precio, mensaje: `${match.nombre} cuesta ${match.precio}\u20ac, pero con ${presupuesto}\u20ac te recomiendo ${mejor.nombre} por ${mejor.precio}\u20ac` });\n}\n\nreturn JSON.stringify({ resultado: 'descartado', modelo_solicitado: match.nombre, precio_modelo: match.precio, precio_minimo: 299, mensaje: `Ning\u00fan modelo disponible por ${presupuesto}\u20ac. Precio m\u00ednimo: 299\u20ac` });",
+        "parameters": "{\"type\":\"object\",\"properties\":{\"modelo\":{\"type\":\"string\",\"description\":\"Nombre del modelo de barbacoa que el cliente ha seleccionado\"},\"presupuesto\":{\"type\":\"number\",\"description\":\"Presupuesto del cliente en euros (\u20ac). Ejemplo: 500\"}},\"required\":[\"modelo\",\"presupuesto\"]}"
       }
     },
     {
@@ -504,7 +458,10 @@
       "name": "Enviar Respuesta WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [3600, 300],
+      "position": [
+        3600,
+        300
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $credentials.evolutionApi.url }}/message/sendText/{{ $credentials.evolutionApi.instanceName }}",
@@ -540,7 +497,10 @@
       "name": "Actualizar Chatter Odoo",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [3900, 300],
+      "position": [
+        3900,
+        300
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $credentials.odooApi.url }}/jsonrpc",
@@ -549,7 +509,7 @@
         "sendBody": true,
         "contentType": "application/json",
         "rawBody": true,
-        "body": "={{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\n      $credentials.odooApi.database,\n      $json.uid || 1,\n      $credentials.odooApi.password,\n      \"crm.lead\",\n      \"message_post\",\n      [$json.lead_id || $json.id],\n      {\n        \"body\": \"<p>🤖 <b>Asistente Barbacoa - Planificador</b></p><p>\" + ($json.output || 'Sin contenido').substring(0, 800).replace(/\\n/g, '<br>') + \"</p><p>📅 \" + new Date().toLocaleString() + \"</p>\",\n        \"subtype_xmlid\": \"mail.mt_note\"\n      }\n    ]\n  }\n} }}",
+        "body": "={{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\n      $credentials.odooApi.database,\n      $json.uid || 1,\n      $credentials.odooApi.password,\n      \"crm.lead\",\n      \"message_post\",\n      [$json.lead_id || $json.id],\n      {\n        \"body\": \"<p>\ud83e\udd16 <b>Asistente Barbacoa - Planificador</b></p><p>\" + ($json.output || 'Sin contenido').substring(0, 800).replace(/\\n/g, '<br>') + \"</p><p>\ud83d\udcc5 \" + new Date().toLocaleString() + \"</p>\",\n        \"subtype_xmlid\": \"mail.mt_note\"\n      }\n    ]\n  }\n} }}",
         "options": {
           "timeout": 30000
         },
@@ -568,7 +528,10 @@
       "name": "Router Estado Final",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 2,
-      "position": [4200, 300],
+      "position": [
+        4200,
+        300
+      ],
       "parameters": {
         "dataType": "string",
         "value1": "={{ ($json.estado_final || 'en_conversacion').toString().toLowerCase().trim() }}",
@@ -591,10 +554,13 @@
     },
     {
       "id": "n21-confirmacion-final",
-      "name": "Confirmación Final WhatsApp",
+      "name": "Confirmaci\u00f3n Final WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [4500, 100],
+      "position": [
+        4500,
+        100
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $credentials.evolutionApi.url }}/message/sendText/{{ $credentials.evolutionApi.instanceName }}",
@@ -612,7 +578,7 @@
         "sendBody": true,
         "contentType": "application/json",
         "rawBody": true,
-        "body": "={{\n  \"number\": $json.phone || $json.phoneNumber,\n  \"textMessage\": {\n    \"text\": \"Genial, tenemos todo correcto. Enseguida uno de nuestros decoradores o nuestros exterioristas te contestará el mensaje. ¡Gracias por tu interés! 🎉🔥\"\n  },\n  \"options\": {\n    \"delay\": 500,\n    \"linkPreview\": false\n  }\n}}",
+        "body": "={{\n  \"number\": $json.phone || $json.phoneNumber,\n  \"textMessage\": {\n    \"text\": \"Genial, tenemos todo correcto. Enseguida uno de nuestros decoradores o nuestros exterioristas te contestar\u00e1 el mensaje. \u00a1Gracias por tu inter\u00e9s! \ud83c\udf89\ud83d\udd25\"\n  },\n  \"options\": {\n    \"delay\": 500,\n    \"linkPreview\": false\n  }\n}}",
         "options": {
           "timeout": 30000
         },
@@ -630,7 +596,10 @@
       "name": "Odoo - Stage Presupuesto Pendiente",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [4800, 100],
+      "position": [
+        4800,
+        100
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $credentials.odooApi.url }}/jsonrpc",
@@ -655,14 +624,17 @@
     },
     {
       "id": "n23-quitar-sheets-exito",
-      "name": "Quitar de Números Barbacoa",
+      "name": "Quitar de N\u00fameros Barbacoa",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
-      "position": [5100, 100],
+      "position": [
+        5100,
+        100
+      ],
       "parameters": {
         "operation": "deleteRows",
         "documentId": "={{ $credentials.googleSheetsOAuth2Api.spreadsheetId }}",
-        "sheetName": "Números Barbacoa",
+        "sheetName": "N\u00fameros Barbacoa",
         "range": "A:E",
         "options": {},
         "dataMode": "define",
@@ -684,7 +656,10 @@
       "name": "Odoo - Marcar Perdido",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [4500, 500],
+      "position": [
+        4500,
+        500
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $credentials.odooApi.url }}/jsonrpc",
@@ -712,7 +687,10 @@
       "name": "Odoo - Stage Perdido No Cualificado",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [4800, 500],
+      "position": [
+        4800,
+        500
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $credentials.odooApi.url }}/jsonrpc",
@@ -721,7 +699,7 @@
         "sendBody": true,
         "contentType": "application/json",
         "rawBody": true,
-        "body": "={{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\n      $credentials.odooApi.database,\n      $json.uid || 1,\n      $credentials.odooApi.password,\n      \"crm.lead\",\n      \"message_post\",\n      [[$json.lead_id || $json.id]],\n      {\n        \"body\": \"<p>❌ <b>Lead descartado por precio</b></p><p>El cliente no cumple con el presupuesto mínimo. Motivo: No cualificado - Precio.</p><p>📅 \" + new Date().toLocaleString() + \"</p>\",\n        \"subtype_xmlid\": \"mail.mt_note\"\n      }\n    ]\n  }\n} }}",
+        "body": "={{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\n      $credentials.odooApi.database,\n      $json.uid || 1,\n      $credentials.odooApi.password,\n      \"crm.lead\",\n      \"message_post\",\n      [[$json.lead_id || $json.id]],\n      {\n        \"body\": \"<p>\u274c <b>Lead descartado por precio</b></p><p>El cliente no cumple con el presupuesto m\u00ednimo. Motivo: No cualificado - Precio.</p><p>\ud83d\udcc5 \" + new Date().toLocaleString() + \"</p>\",\n        \"subtype_xmlid\": \"mail.mt_note\"\n      }\n    ]\n  }\n} }}",
         "options": {
           "timeout": 30000
         },
@@ -737,14 +715,17 @@
     },
     {
       "id": "n26-quitar-sheets-perdido",
-      "name": "Quitar de Números Barbacoa (Perdido)",
+      "name": "Quitar de N\u00fameros Barbacoa (Perdido)",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
-      "position": [5100, 500],
+      "position": [
+        5100,
+        500
+      ],
       "parameters": {
         "operation": "deleteRows",
         "documentId": "={{ $credentials.googleSheetsOAuth2Api.spreadsheetId }}",
-        "sheetName": "Números Barbacoa",
+        "sheetName": "N\u00fameros Barbacoa",
         "range": "A:E",
         "options": {},
         "dataMode": "define",
@@ -763,10 +744,13 @@
     },
     {
       "id": "n27-comprobacion-caducidad",
-      "name": "Comprobación Caducidad",
+      "name": "Comprobaci\u00f3n Caducidad",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [2100, 600],
+      "position": [
+        2100,
+        600
+      ],
       "parameters": {}
     },
     {
@@ -774,7 +758,10 @@
       "name": "IF Primer Intento",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2400, 600],
+      "position": [
+        2400,
+        600
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -802,7 +789,10 @@
       "name": "Establecer followup_count=1",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
-      "position": [2700, 500],
+      "position": [
+        2700,
+        500
+      ],
       "parameters": {
         "mode": "define",
         "values": {
@@ -823,7 +813,10 @@
       "name": "Enviar Recordatorio WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [3000, 500],
+      "position": [
+        3000,
+        500
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $credentials.evolutionApi.url }}/message/sendText/{{ $credentials.evolutionApi.instanceName }}",
@@ -841,7 +834,7 @@
         "sendBody": true,
         "contentType": "application/json",
         "rawBody": true,
-        "body": "={{\n  \"number\": $json.phone || $json.phoneNumber,\n  \"textMessage\": {\n    \"text\": \"¡Hola \" + ($json.contact_name || '') + \"! 👋 ¿Pudiste ver el catálogo de barbacoas que te enviamos? 🔥 Si tienes cualquier duda o quieres que te ayude a elegir el modelo ideal, estoy aquí para ti. ¡Escríbeme cuando quieras!\"\n  },\n  \"options\": {\n    \"delay\": 1000,\n    \"linkPreview\": false\n  }\n}}",
+        "body": "={{\n  \"number\": $json.phone || $json.phoneNumber,\n  \"textMessage\": {\n    \"text\": \"\u00a1Hola \" + ($json.contact_name || '') + \"! \ud83d\udc4b \u00bfPudiste ver el cat\u00e1logo de barbacoas que te enviamos? \ud83d\udd25 Si tienes cualquier duda o quieres que te ayude a elegir el modelo ideal, estoy aqu\u00ed para ti. \u00a1Escr\u00edbeme cuando quieras!\"\n  },\n  \"options\": {\n    \"delay\": 1000,\n    \"linkPreview\": false\n  }\n}}",
         "options": {
           "timeout": 30000
         },
@@ -859,7 +852,10 @@
       "name": "Esperar Respuesta Recordatorio 24h",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [3300, 500],
+      "position": [
+        3300,
+        500
+      ],
       "parameters": {
         "resume": "webhook",
         "limit": {
@@ -875,11 +871,14 @@
       "name": "Aviso Gmail - Sin Respuesta",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 1,
-      "position": [3600, 600],
+      "position": [
+        3600,
+        600
+      ],
       "parameters": {
         "operation": "send",
-        "subject": "⚠️ Lead sin respuesta - Barbacoa - {{ $json.contact_name }}",
-        "htmlBody": "<h2>⚠️ Lead sin respuesta tras seguimiento completo</h2><table border='1' cellpadding='8' cellspacing='0' style='border-collapse:collapse;font-family:Arial;'><tr><td><b>Nombre</b></td><td>{{ $json.contact_name }}</td></tr><tr><td><b>Teléfono</b></td><td>{{ $json.phone }}</td></tr><tr><td><b>Email</b></td><td>{{ $json.email }}</td></tr><tr><td><b>ID Lead</b></td><td>{{ $json.lead_id || $json.id }}</td></tr></table><p>Este lead no ha respondido a los mensajes automáticos de WhatsApp (catálogo + recordatorio).</p><p><b>Requiere llamada/contacto manual urgente.</b></p><p>📅 {{ new Date().toLocaleString() }}</p>",
+        "subject": "\u26a0\ufe0f Lead sin respuesta - Barbacoa - {{ $json.contact_name }}",
+        "htmlBody": "<h2>\u26a0\ufe0f Lead sin respuesta tras seguimiento completo</h2><table border='1' cellpadding='8' cellspacing='0' style='border-collapse:collapse;font-family:Arial;'><tr><td><b>Nombre</b></td><td>{{ $json.contact_name }}</td></tr><tr><td><b>Tel\u00e9fono</b></td><td>{{ $json.phone }}</td></tr><tr><td><b>Email</b></td><td>{{ $json.email }}</td></tr><tr><td><b>ID Lead</b></td><td>{{ $json.lead_id || $json.id }}</td></tr></table><p>Este lead no ha respondido a los mensajes autom\u00e1ticos de WhatsApp (cat\u00e1logo + recordatorio).</p><p><b>Requiere llamada/contacto manual urgente.</b></p><p>\ud83d\udcc5 {{ new Date().toLocaleString() }}</p>",
         "toList": "comercial@empresa.com",
         "options": {
           "replyTo": "",
@@ -896,14 +895,17 @@
     },
     {
       "id": "n33-quitar-sheets-sin-respuesta",
-      "name": "Quitar de Números Barbacoa (Timeout)",
+      "name": "Quitar de N\u00fameros Barbacoa (Timeout)",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
-      "position": [3900, 600],
+      "position": [
+        3900,
+        600
+      ],
       "parameters": {
         "operation": "deleteRows",
         "documentId": "={{ $credentials.googleSheetsOAuth2Api.spreadsheetId }}",
-        "sheetName": "Números Barbacoa",
+        "sheetName": "N\u00fameros Barbacoa",
         "range": "A:E",
         "options": {},
         "dataMode": "define",
@@ -937,7 +939,7 @@
       "main": [
         [
           {
-            "node": "Buscar en Números Barbacoa",
+            "node": "Buscar en N\u00fameros Barbacoa",
             "type": "main",
             "index": 0
           }
@@ -951,7 +953,7 @@
         ]
       ]
     },
-    "Buscar en Números Barbacoa": {
+    "Buscar en N\u00fameros Barbacoa": {
       "main": [
         [
           {
@@ -973,14 +975,14 @@
         ],
         [
           {
-            "node": "Añadir a Números Barbacoa",
+            "node": "A\u00f1adir a N\u00fameros Barbacoa",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Añadir a Números Barbacoa": {
+    "A\u00f1adir a N\u00fameros Barbacoa": {
       "main": [
         [
           {
@@ -995,25 +997,25 @@
       "main": [
         [
           {
-            "node": "Inicializar Sesión",
+            "node": "Inicializar Sesi\u00f3n",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Inicializar Sesión": {
+    "Inicializar Sesi\u00f3n": {
       "main": [
         [
           {
-            "node": "Enviar Catálogo WhatsApp",
+            "node": "Enviar Cat\u00e1logo WhatsApp",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Enviar Catálogo WhatsApp": {
+    "Enviar Cat\u00e1logo WhatsApp": {
       "main": [
         [
           {
@@ -1039,83 +1041,7 @@
       "main": [
         [
           {
-            "node": "Buscar Modelo en Sheets",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Comprobación Caducidad",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Modelo en Sheets": {
-      "main": [
-        [
-          {
-            "node": "Filtrar Modelo Cliente",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filtrar Modelo Cliente": {
-      "main": [
-        [
-          {
-            "node": "Enviar Mensaje del Modelo",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Enviar Mensaje del Modelo": {
-      "main": [
-        [
-          {
-            "node": "Esperar Respuesta General",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "IF Modelo Enviado": {
-      "main": [
-        [
-          {
-            "node": "Buscar Modelo en Sheets",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
             "node": "AI Agent - Planificador",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Esperar Respuesta General": {
-      "main": [
-        [
-          {
-            "node": "IF Modelo Enviado",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Comprobación Caducidad",
             "type": "main",
             "index": 0
           }
@@ -1196,7 +1122,7 @@
       "main": [
         [
           {
-            "node": "Confirmación Final WhatsApp",
+            "node": "Confirmaci\u00f3n Final WhatsApp",
             "type": "main",
             "index": 0
           }
@@ -1217,7 +1143,7 @@
         ]
       ]
     },
-    "Confirmación Final WhatsApp": {
+    "Confirmaci\u00f3n Final WhatsApp": {
       "main": [
         [
           {
@@ -1232,7 +1158,7 @@
       "main": [
         [
           {
-            "node": "Quitar de Números Barbacoa",
+            "node": "Quitar de N\u00fameros Barbacoa",
             "type": "main",
             "index": 0
           }
@@ -1254,14 +1180,14 @@
       "main": [
         [
           {
-            "node": "Quitar de Números Barbacoa (Perdido)",
+            "node": "Quitar de N\u00fameros Barbacoa (Perdido)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Comprobación Caducidad": {
+    "Comprobaci\u00f3n Caducidad": {
       "main": [
         [
           {
@@ -1316,14 +1242,7 @@
       "main": [
         [
           {
-            "node": "Buscar Modelo en Sheets",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Aviso Gmail - Sin Respuesta",
+            "node": "AI Agent - Planificador",
             "type": "main",
             "index": 0
           }
@@ -1334,7 +1253,7 @@
       "main": [
         [
           {
-            "node": "Quitar de Números Barbacoa (Timeout)",
+            "node": "Quitar de N\u00fameros Barbacoa (Timeout)",
             "type": "main",
             "index": 0
           }

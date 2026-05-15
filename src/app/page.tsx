@@ -360,21 +360,9 @@ const PROJECTS = [
       },
       {
         id: "p6-6",
-        type: "api_call",
-        title: "Buscar modelo en Google Sheets + enviar mensaje",
-        subtitle: "Cuando el cliente dice qué modelo le interesa, se busca en la base de datos 'Modelos Barbacoa' en Google Sheets y se envía el mensaje correspondiente por WhatsApp.",
-        api: ["Sheets", "Evolution API"],
-        details: [
-          "Google Sheets: Read/Lookup por nombre de modelo",
-          "Extrae: precio, material, tamaño, descripción, mensaje_whatsapp",
-          "Evolution API: POST /message/sendText con el mensaje del modelo"
-        ]
-      },
-      {
-        id: "p6-7",
         type: "ai",
         title: "AI Agent Planificador (GPT-4o)",
-        subtitle: "Agente con 3 tools: BuscarInfoModelo (Sheets), RegistrarNotaOdoo, EvaluarPresupuesto (Sheets). Gestiona dudas y luego ejecuta el planificador de preguntas.",
+        subtitle: "Agente con 3 tools que gestiona todo: buscar modelo en Sheets, resolver dudas, planificador de preguntas y validación de presupuesto.",
         api: ["IA", "n8n", "Sheets", "Odoo"],
         details: [
           "Fase 1: Resolver dudas sobre el modelo (loop)",
@@ -389,7 +377,7 @@ const PROJECTS = [
         ]
       },
       {
-        id: "p6-8",
+        id: "p6-7",
         type: "decision",
         title: "Validar presupuesto vs modelo",
         subtitle: "El agente compara el presupuesto del cliente con el precio real del modelo desde Sheets. Decide ruta: OK, recomendar más barato, o descartar.",
@@ -403,7 +391,7 @@ const PROJECTS = [
         ]
       },
       {
-        id: "p6-9",
+        id: "p6-8",
         type: "action",
         title: "Lead cualificado - Confirmación + Quitar de Sheets",
         subtitle: "WhatsApp: 'Genial, tenemos todo correcto. Enseguida un exteriorista te contestará.' Odoo: Stage 'Presupuesto Pendiente'. Sheets: Eliminar fila de 'Números Barbacoa'.",
@@ -415,7 +403,7 @@ const PROJECTS = [
         ]
       },
       {
-        id: "p6-10",
+        id: "p6-9",
         type: "action",
         title: "Lead descartado - Marcar perdido + Quitar de Sheets",
         subtitle: "Odoo: Stage 'Perdido' + Razón 'No cualificado - Precio'. Sheets: Eliminar fila de 'Números Barbacoa'. Fin del flujo.",
