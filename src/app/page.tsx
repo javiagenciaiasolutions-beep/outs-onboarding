@@ -361,7 +361,7 @@ const PROJECTS = [
       {
         id: "p6-6",
         type: "ai",
-        title: "AI Agent Planificador (GPT-4o)",
+        title: "AI Agent Planificador",
         subtitle: "Agente con 3 tools que gestiona todo: buscar modelo en Sheets, resolver dudas, planificador de preguntas y validación de presupuesto.",
         api: ["IA", "n8n", "Sheets", "Odoo"],
         details: [
@@ -388,21 +388,35 @@ const PROJECTS = [
       },
       {
         id: "p6-7",
-        type: "action",
-        title: "Lead cualificado - Confirmación + Quitar de Sheets",
-        subtitle: "WhatsApp: 'Genial, tenemos todo correcto. Enseguida un exteriorista te contestará.' Odoo: Stage 'Presupuesto Pendiente'. Sheets: Eliminar fila de 'Números Barbacoa'.",
+        type: "decision",
+        title: "Router de salida",
+        subtitle: "El AI Agent define estado_final. CUALIFICADO → confirmación y stage. DESCARTADO → marcar perdido y limpiar Sheets.",
+        api: ["IA", "n8n"],
+        details: [
+          "Switch Node en n8n según estado_final del agente",
+          "CUALIFICADO → Rama afirmativa",
+          "DESCARTADO → Rama negativa"
+        ]
+      },
+      {
+        id: "p6-7-yes",
+        type: "branch_yes",
+        branchLabel: "SÍ — Cualificado",
+        title: "Confirmación final + Quitar de Sheets",
+        subtitle: "WhatsApp: mensaje de confirmación. Odoo: Stage 'Presupuesto Pendiente'. Sheets: Eliminar fila de 'Números Barbacoa'.",
         api: ["Evolution API", "Odoo", "Sheets"],
         details: [
-          "Evolution API: Mensaje de confirmación final",
+          "Evolution API: Mensaje 'Genial, tenemos todo correcto...'",
           "Odoo: Stage 'Presupuesto Pendiente'",
           "Google Sheets: Delete row de 'Números Barbacoa'"
         ]
       },
       {
-        id: "p6-8",
-        type: "action",
-        title: "Lead descartado - Marcar perdido + Quitar de Sheets",
-        subtitle: "Odoo: Stage 'Perdido' + Razón 'No cualificado - Precio'. Sheets: Eliminar fila de 'Números Barbacoa'. Fin del flujo.",
+        id: "p6-7-no",
+        type: "branch_no",
+        branchLabel: "NO — Descartado",
+        title: "Marcar perdido + Quitar de Sheets",
+        subtitle: "Odoo: Stage 'Perdido' + Razón 'No cualificado - Precio'. Sheets: Eliminar fila. Fin del flujo.",
         api: ["Odoo", "Sheets"],
         details: [
           "Odoo: Stage 'Perdido' + lost_reason 'No cualificado - Precio'",
