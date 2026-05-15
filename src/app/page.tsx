@@ -303,85 +303,124 @@ const PROJECTS = [
   {
     id: "06",
     title: "MVP Asistente WhatsApp (Barbacoa)",
-    description: "Asistente de IA conversacional para gestionar leads de barbacoas vía WhatsApp. Flujo completo en n8n con filtro estricto en Odoo, Evolution API, AI Agent con GPT-4o, y sistema de follow-up inteligente.",
-    apis: ["Odoo", "Evolution API", "IA", "Gmail", "Google Docs"],
+    description: "Asistente de IA conversacional con planificador. Filtra lead en Odoo, añade a Sheets 'Números Barbacoa', consulta modelos en Google Sheets, planificador con preguntas, validación de presupuesto, y limpieza final de Sheets.",
+    apis: ["Odoo", "Evolution API", "IA", "Sheets", "Gmail"],
     steps: [
       {
         id: "p6-1",
         type: "trigger",
-        title: "Webhook Odoo - Nuevo Lead entrante",
-        subtitle: "Recibe el payload cuando se crea un lead en Odoo. Solo continúa si es 'Nuevo Lead' Y tiene etiqueta 'barbacoa'. Cualquier otro lead se detiene automáticamente.",
-        api: ["Odoo", "n8n"],
-        details: ["Webhook POST desde Odoo", "Filtro IF: stage_id.name == 'Nuevo Lead'", "Filtro IF: tag_ids contiene 'barbacoa'", "False → NoOp (detener sin afectar otros flujos)"]
+        title: "Webhook Odoo + Filtro + Añadir a Sheets",
+        subtitle: "Recibe el lead. Solo pasa si es 'Nuevo Lead' Y tiene tag 'barbacoa'. Si pasa, se añade su teléfono a la hoja 'Números Barbacoa' para aislarlo del flujo genérico.",
+        api: ["Odoo", "n8n", "Sheets"],
+        details: [
+          "Webhook POST desde Odoo",
+          "IF: stage_id.name == 'Nuevo Lead' AND tag_ids contiene 'barbacoa'",
+          "False → NoOp (detener, no afectar otros flujos)",
+          "True → Google Sheets: Append fila a 'Números Barbacoa' (teléfono, nombre, lead_id)"
+        ]
       },
       {
         id: "p6-2",
         type: "action",
-        title: "Obtener datos e inicializar sesión",
-        subtitle: "Extrae id, contact_name, phone, email del lead desde Odoo e inicializa variables de sesión: lead_id, phone, stage='inicio', followup_count=0.",
+        title: "Obtener datos + Inicializar sesión",
+        subtitle: "Extrae id, contact_name, phone, email del lead desde Odoo. Set: lead_id, phone, stage, followup_count=0.",
         api: ["Odoo", "n8n"],
-        details: ["HTTP Request a Odoo XML-RPC / JSON-RPC", "Set node: lead_id, phone, stage, followup_count"]
+        details: ["HTTP Request Odoo XML-RPC", "Set node: lead_id, phone, stage, followup_count"]
       },
       {
         id: "p6-3",
         type: "api_call",
-        title: "Enviar catálogo y registrar primer contacto",
-        subtitle: "Envía foto del catálogo + saludo personalizado vía Evolution API y registra nota interna en Odoo (message_post).",
+        title: "Enviar catálogo + Registrar primer contacto",
+        subtitle: "Evolution API: envía foto del catálogo con saludo personalizado. Odoo message_post: 'Primer contacto enviado vía WhatsApp.'",
         api: ["Evolution API", "Odoo"],
-        details: ["POST /message/sendMedia → imagen + caption personalizado", "message_post en Odoo: 'Primer contacto enviado vía WhatsApp. Catálogo enviado.'"]
+        details: ["POST /message/sendMedia (imagen + caption personalizado)", "message_post en Odoo"]
       },
       {
         id: "p6-4",
         type: "wait",
         title: "Esperar respuesta 24h (resume on webhook)",
-        subtitle: "Wait node que pausa el flujo. Si el cliente responde antes de 24h, va al Asistente IA. Si expira, va al sistema de Follow-up.",
+        subtitle: "Wait node que pausa el flujo. Si responde → va a búsqueda de modelo en Sheets. Si expira → sistema de recordatorio.",
         api: ["n8n", "Evolution API"],
-        details: ["Wait: Resume on Webhook", "Timeout: 24 horas", "Response recibida → AI Agent", "Timeout → Bloque Follow-up"]
+        details: ["Resume on Webhook", "Timeout: 24h", "Response → Buscar modelo en Sheets", "Timeout → Bloque recordatorio"]
       },
       {
         id: "p6-5",
-        type: "ai",
-        title: "AI Agent - Asistente Conversacional (GPT-4o)",
-        subtitle: "Agente con OpenAI GPT-4o, Window Buffer Memory y 3 tools: ObtenerInfoModelos (Google Docs), RegistrarNotaOdoo (Chatter), EvaluarPresupuesto.",
-        api: ["IA", "n8n", "Google Docs"],
+        type: "decision",
+        title: "Sistema de recordatorio (sin respuesta 24h)",
+        subtitle: "Si expiró la espera inicial: IF followup_count==0 → enviar recordatorio WhatsApp + set count=1 + nueva espera 24h. Si count ya es 1 → Gmail alerta a comercial + quitar de Sheets.",
+        api: ["Evolution API", "Gmail", "Sheets"],
         details: [
-          "Model: OpenAI GPT-4o",
-          "Memory: Window Buffer (Session ID = phone, 10 turnos)",
-          "Tool 1: ObtenerInfoModelos → Google Docs (modelos de barbacoa)",
-          "Tool 2: RegistrarNotaOdoo → message_post en Odoo",
-          "Tool 3: EvaluarPresupuesto → código JS de comparación",
-          "Flujo interno: SELECCIÓN_MODELO → RESOLUCIÓN_DUDAS → PERSONALIZACIÓN (test 5 preguntas) → CUALIFICACIÓN"
+          "IF followup_count == 0: Recordatorio WhatsApp + nueva Wait 24h",
+          "  → Si responde ahora: va a Buscar modelo en Sheets",
+          "  → Si timeout otra vez: Gmail alerta + Quitar de 'Números Barbacoa' + Fin",
+          "IF followup_count == 1: Gmail alerta + Quitar de Sheets + Fin"
         ]
       },
       {
         id: "p6-6",
-        type: "decision",
-        title: "Router de salida (Switch Node)",
-        subtitle: "El AI Agent define estado_final. Switch enruta según el resultado: cualificado, descartado_precio o en_conversacion (loop).",
-        api: ["IA", "n8n"],
+        type: "api_call",
+        title: "Buscar modelo en Google Sheets + enviar mensaje",
+        subtitle: "Cuando el cliente dice qué modelo le interesa, se busca en la base de datos 'Modelos Barbacoa' en Google Sheets y se envía el mensaje correspondiente por WhatsApp.",
+        api: ["Sheets", "Evolution API"],
         details: [
-          "CUALIFICADO → Gmail aviso comercial + Stage 'Presupuesto Pendiente' + Tag 'Personalizado'",
-          "DESCARTADO_PRECIO → Stage 'Perdido' (razón: No cualificado - Precio) + Nota interna",
-          "EN_CONVERSACION → Loop a Wait 24h para seguir conversando"
+          "Google Sheets: Read/Lookup por nombre de modelo",
+          "Extrae: precio, material, tamaño, descripción, mensaje_whatsapp",
+          "Evolution API: POST /message/sendText con el mensaje del modelo"
         ]
       },
       {
         id: "p6-7",
-        type: "action",
-        title: "Lead cualificado - Aviso y stage",
-        subtitle: "Email interno al equipo con resumen de personalización y actualización del lead a 'Presupuesto Pendiente' en Odoo.",
-        api: ["Gmail", "Odoo"],
-        details: ["Gmail: Asunto 'Nuevo Lead Cualificado - Barbacoa - {{nombre}}'", "Odoo: Stage 'Presupuesto Pendiente' + Tag 'Personalizado'"]
+        type: "ai",
+        title: "AI Agent Planificador (GPT-4o)",
+        subtitle: "Agente con 3 tools: BuscarInfoModelo (Sheets), RegistrarNotaOdoo, EvaluarPresupuesto (Sheets). Gestiona dudas y luego ejecuta el planificador de preguntas.",
+        api: ["IA", "n8n", "Sheets", "Odoo"],
+        details: [
+          "Fase 1: Resolver dudas sobre el modelo (loop)",
+          "Fase 2: Planificador - preguntas una a una:",
+          "  P1: Tamaño (Pequeña, Mediana, Grande)",
+          "  P2: Material (Inox, Fundición, Recomendación)",
+          "  P3: Color/Estilo",
+          "  P4: Extras (Tapa, Ruedas, Parrilla)",
+          "  P5: Presupuesto aproximado",
+          "Cada respuesta se guarda en Odoo vía tool RegistrarNotaOdoo",
+          "Tool BuscarInfoModelo lee de Google Sheets (no hardcodeado)"
+        ]
       },
       {
         id: "p6-8",
-        type: "action",
-        title: "Sistema de Follow-up inteligente",
-        subtitle: "Si expiran 24h sin respuesta: intento 1 = recordatorio WhatsApp + loop 24h. Intento 2 = email a comercial + Stage 'Seguimiento Manual'.",
-        api: ["Evolution API", "Gmail", "Odoo"],
+        type: "decision",
+        title: "Validar presupuesto vs modelo",
+        subtitle: "El agente compara el presupuesto del cliente con el precio real del modelo desde Sheets. Decide ruta: OK, recomendar más barato, o descartar.",
+        api: ["IA", "Sheets"],
         details: [
-          "IF followup_count == 0 → Enviar recordatorio WhatsApp + incrementar contador + loop Wait 24h",
-          "IF followup_count == 1 → Email interno a comercial + Stage 'Seguimiento Manual' en Odoo"
+          "Tool EvaluarPresupuesto: lee precios reales de Google Sheets",
+          "Si presupuesto >= precio modelo → CUALIFICADO",
+          "Si presupuesto < precio modelo: ¿Hay modelo más barato?",
+          "  → Sí: Recomendar modelo económico X (loop)",
+          "  → No: DESCARTADO - Marcar como Perdido + No cualificado en Odoo"
+        ]
+      },
+      {
+        id: "p6-9",
+        type: "action",
+        title: "Lead cualificado - Confirmación + Quitar de Sheets",
+        subtitle: "WhatsApp: 'Genial, tenemos todo correcto. Enseguida un exteriorista te contestará.' Odoo: Stage 'Presupuesto Pendiente'. Sheets: Eliminar fila de 'Números Barbacoa'.",
+        api: ["Evolution API", "Odoo", "Sheets"],
+        details: [
+          "Evolution API: Mensaje de confirmación final",
+          "Odoo: Stage 'Presupuesto Pendiente'",
+          "Google Sheets: Delete row de 'Números Barbacoa'"
+        ]
+      },
+      {
+        id: "p6-10",
+        type: "action",
+        title: "Lead descartado - Marcar perdido + Quitar de Sheets",
+        subtitle: "Odoo: Stage 'Perdido' + Razón 'No cualificado - Precio'. Sheets: Eliminar fila de 'Números Barbacoa'. Fin del flujo.",
+        api: ["Odoo", "Sheets"],
+        details: [
+          "Odoo: Stage 'Perdido' + lost_reason 'No cualificado - Precio'",
+          "Google Sheets: Delete row de 'Números Barbacoa'"
         ]
       }
     ]
