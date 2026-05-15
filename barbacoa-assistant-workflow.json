@@ -63,11 +63,67 @@
       "parameters": {}
     },
     {
-      "id": "n3-anadir-sheets",
-      "name": "Añadir a Números Barbacoa",
+      "id": "n3-buscar-sheets",
+      "name": "Buscar en Números Barbacoa",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [600, 300],
+      "parameters": {
+        "operation": "read",
+        "documentId": "={{ $credentials.googleSheetsOAuth2Api.spreadsheetId }}",
+        "sheetName": "Números Barbacoa",
+        "range": "A:E",
+        "options": {
+          "returnAll": false,
+          "maxResults": 1,
+          "dataLocationOnSheet": "firstRowHeaders"
+        },
+        "filters": {
+          "values": {
+            "0": {
+              "lookupColumn": "telefono",
+              "lookupValue": "={{ $json.phone || $json.mobile }}"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "n3b-if-sheets",
+      "name": "IF Lead en Sheets",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [750, 300],
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "c-sheets-found",
+              "leftValue": "={{ $json.telefono || $json.phone || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n3c-anadir-sheets",
+      "name": "Añadir a Números Barbacoa",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [600, 500],
       "parameters": {
         "operation": "append",
         "documentId": "={{ $credentials.googleSheetsOAuth2Api.spreadsheetId }}",
@@ -881,7 +937,7 @@
       "main": [
         [
           {
-            "node": "Añadir a Números Barbacoa",
+            "node": "Buscar en Números Barbacoa",
             "type": "main",
             "index": 0
           }
@@ -889,6 +945,35 @@
         [
           {
             "node": "Fin - No Barbacoa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar en Números Barbacoa": {
+      "main": [
+        [
+          {
+            "node": "IF Lead en Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Lead en Sheets": {
+      "main": [
+        [
+          {
+            "node": "Obtener Datos Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Añadir a Números Barbacoa",
             "type": "main",
             "index": 0
           }

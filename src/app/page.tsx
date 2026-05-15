@@ -309,14 +309,16 @@ const PROJECTS = [
       {
         id: "p6-1",
         type: "trigger",
-        title: "Webhook Odoo + Filtro + Añadir a Sheets",
-        subtitle: "Recibe el lead. Solo pasa si es 'Nuevo Lead' Y tiene tag 'barbacoa'. Si pasa, se añade su teléfono a la hoja 'Números Barbacoa' para aislarlo del flujo genérico.",
+        title: "Webhook Odoo + Filtro + Comprobar en Sheets",
+        subtitle: "Recibe el lead. Solo pasa si es 'Nuevo Lead' Y tiene tag 'barbacoa'. Se comprueba si el lead ya está en la hoja 'Números Barbacoa'. Si no está, se añade automáticamente.",
         api: ["Odoo", "n8n", "Sheets"],
         details: [
           "Webhook POST desde Odoo",
           "IF: stage_id.name == 'Nuevo Lead' AND tag_ids contiene 'barbacoa'",
           "False → NoOp (detener, no afectar otros flujos)",
-          "True → Google Sheets: Append fila a 'Números Barbacoa' (teléfono, nombre, lead_id)"
+          "True → Google Sheets: Buscar teléfono en 'Números Barbacoa'",
+          "Si NO está en Sheets → Append fila (teléfono, nombre, lead_id)",
+          "Si YA está → Continuar directamente (evita duplicados)"
         ]
       },
       {
