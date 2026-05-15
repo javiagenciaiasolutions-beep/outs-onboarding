@@ -347,13 +347,13 @@ const PROJECTS = [
       },
       {
         id: "p6-5",
-        type: "decision",
+        type: "action",
         title: "Sistema de recordatorio (sin respuesta 24h)",
         subtitle: "Si expiró la espera inicial: IF followup_count==0 → enviar recordatorio WhatsApp + set count=1 + nueva espera 24h. Si count ya es 1 → Gmail alerta a comercial + quitar de Sheets.",
         api: ["Evolution API", "Gmail", "Sheets"],
         details: [
           "IF followup_count == 0: Recordatorio WhatsApp + nueva Wait 24h",
-          "  → Si responde ahora: va a Buscar modelo en Sheets",
+          "  → Si responde ahora: continúa al AI Agent",
           "  → Si timeout otra vez: Gmail alerta + Quitar de 'Números Barbacoa' + Fin",
           "IF followup_count == 1: Gmail alerta + Quitar de Sheets + Fin"
         ]
