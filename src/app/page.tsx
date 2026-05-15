@@ -365,33 +365,29 @@ const PROJECTS = [
         subtitle: "Agente con 3 tools que gestiona todo: buscar modelo en Sheets, resolver dudas, planificador de preguntas y validación de presupuesto.",
         api: ["IA", "n8n", "Sheets", "Odoo"],
         details: [
-          "Fase 1: Resolver dudas sobre el modelo (loop)",
-          "Fase 2: Planificador - preguntas una a una:",
+          "Tool BuscarInfoModelo: consulta modelos en Google Sheets (precios, materiales, mensajes)",
+          "Tool RegistrarNotaOdoo: guarda respuestas del planificador en el Chatter de Odoo",
+          "Tool EvaluarPresupuesto: valida precio vs modelo desde Sheets",
+          "",
+          "Fase 1 - Resolver dudas sobre el modelo (loop con el cliente)",
+          "",
+          "Fase 2 - Planificador de preguntas (una a una, esperando respuesta):",
           "  P1: Tamaño (Pequeña, Mediana, Grande)",
           "  P2: Material (Inox, Fundición, Recomendación)",
           "  P3: Color/Estilo",
           "  P4: Extras (Tapa, Ruedas, Parrilla)",
           "  P5: Presupuesto aproximado",
-          "Cada respuesta se guarda en Odoo vía tool RegistrarNotaOdoo",
-          "Tool BuscarInfoModelo lee de Google Sheets (no hardcodeado)"
+          "  Cada respuesta se guarda en Odoo vía tool RegistrarNotaOdoo",
+          "",
+          "Fase 3 - Validación de presupuesto vs modelo:",
+          "  Si presupuesto >= precio modelo → CUALIFICADO",
+          "  Si presupuesto < precio modelo:",
+          "    → ¿Hay modelo más barato? Recomendar modelo económico X (loop)",
+          "    → ¿No hay? DESCARTADO - Marcar Perdido + No cualificado en Odoo"
         ]
       },
       {
         id: "p6-7",
-        type: "decision",
-        title: "Validar presupuesto vs modelo",
-        subtitle: "El agente compara el presupuesto del cliente con el precio real del modelo desde Sheets. Decide ruta: OK, recomendar más barato, o descartar.",
-        api: ["IA", "Sheets"],
-        details: [
-          "Tool EvaluarPresupuesto: lee precios reales de Google Sheets",
-          "Si presupuesto >= precio modelo → CUALIFICADO",
-          "Si presupuesto < precio modelo: ¿Hay modelo más barato?",
-          "  → Sí: Recomendar modelo económico X (loop)",
-          "  → No: DESCARTADO - Marcar como Perdido + No cualificado en Odoo"
-        ]
-      },
-      {
-        id: "p6-8",
         type: "action",
         title: "Lead cualificado - Confirmación + Quitar de Sheets",
         subtitle: "WhatsApp: 'Genial, tenemos todo correcto. Enseguida un exteriorista te contestará.' Odoo: Stage 'Presupuesto Pendiente'. Sheets: Eliminar fila de 'Números Barbacoa'.",
@@ -403,7 +399,7 @@ const PROJECTS = [
         ]
       },
       {
-        id: "p6-9",
+        id: "p6-8",
         type: "action",
         title: "Lead descartado - Marcar perdido + Quitar de Sheets",
         subtitle: "Odoo: Stage 'Perdido' + Razón 'No cualificado - Precio'. Sheets: Eliminar fila de 'Números Barbacoa'. Fin del flujo.",
